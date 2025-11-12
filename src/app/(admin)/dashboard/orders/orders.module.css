@@ -1,0 +1,367 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+}
+
+/* ───────────────────────────── Header ───────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.search,
+.select {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  outline: none;
+  background: #fff;
+}
+
+.search:focus,
+.select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
+}
+
+/* ───────────────────────────── Table ───────────────────────────── */
+.tableWrapper {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 950px; /* accommodates phone column */
+}
+
+.table th {
+  background: #f8fafc;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.row:hover {
+  background: #f9fafb;
+}
+
+.empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 1rem;
+}
+
+/* ───────────────────────────── Status Badges ───────────────────────────── */
+.status {
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  display: inline-block;
+  text-transform: capitalize;
+}
+
+/* 🎨 Modern Color Scheme (Emoji Style) */
+.pending {
+  background: #fff2e5; /* 🟠 soft orange */
+  color: #d97706; /* vivid amber */
+}
+
+.packed {
+  background: #fffde1; /* 🟡 soft yellow */
+  color: #ca8a04; /* deep golden */
+}
+
+.shipped {
+  background: #f3e8ff; /* 🟣 lavender */
+  color: #7e22ce; /* rich purple */
+}
+
+.delivered {
+  background: #dcfce7; /* 🟢 mint */
+  color: #15803d; /* deep green */
+}
+
+.cancelled {
+  background: #fee2e2; /* 🔴 light red */
+  color: #b91c1c; /* strong red */
+}
+
+/* ───────────────────────────── Loading ───────────────────────────── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: #475569;
+  font-size: 1rem;
+}
+
+/* ───────────────────────────── Drawer Styles ───────────────────────────── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+
+.drawer {
+  position: relative;
+  background: #ffffff;
+  width: 420px;
+  height: 100%;
+  padding: 1.75rem;
+  overflow-y: auto;
+  border-radius: 12px 0 0 12px;
+  animation: slideIn 0.3s ease forwards;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #0f172a;
+}
+
+.drawer p {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  color: #1e293b;
+}
+
+.drawer strong {
+  color: #0f172a;
+}
+
+/* ───────────────────────────── Close Icon ───────────────────────────── */
+.closeIcon {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: transparent;
+  border: none;
+  color: #475569;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.closeIcon:hover {
+  color: #1e293b;
+}
+
+/* ───────────────────────────── Item List ───────────────────────────── */
+.itemList {
+  margin-top: 1.5rem;
+}
+
+.itemList h3 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.itemList ul {
+  list-style: disc;
+  margin-left: 1.25rem;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+/* ───────────────────────────── Update Status Dropdown ───────────────────────────── */
+.statusUpdate {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statusUpdate label {
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+/* Base dropdown style */
+.selectDropdown {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #3b82f6;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  outline: none;
+  background: #fff;
+  color: #000;
+  transition: all 0.2s ease;
+}
+
+/* 🎨 Dynamic color-coded dropdown text */
+.selectDropdown.pending {
+  color: #d97706; /* 🟠 Orange */
+}
+
+.selectDropdown.packed {
+  color: #ca8a04; /* 🟡 Yellow */
+}
+
+.selectDropdown.shipped {
+  color: #7e22ce; /* 🟣 Purple */
+}
+
+.selectDropdown.delivered {
+  color: #15803d; /* 🟢 Green */
+}
+
+.selectDropdown.cancelled {
+  color: #b91c1c; /* 🔴 Red */
+}
+
+/* Focus + disabled states */
+.selectDropdown:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #93c5fd66;
+}
+
+.selectDropdown:disabled {
+  color: #6b7280;
+  background-color: #f9fafb;
+}
+
+/* ───────────────────────────── Update Button ───────────────────────────── */
+.updateBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  margin-top: 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.updateBtn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.updateBtn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* ───────────────────────────── Responsive ───────────────────────────── */
+@media (max-width: 768px) {
+  .table {
+    min-width: 700px;
+  }
+
+  .drawer {
+    width: 100%;
+    border-radius: 0;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search,
+  .select {
+    width: 100%;
+  }
+}
+
+/* ───────────────────────────── Toast Notification ───────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  color: #ffffff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  animation: fadeInOut 2.5s ease-in-out;
+  z-index: 100;
+}
+
+.successToast {
+  background: #22c55e; /* ✅ Green */
+}
+
+.errorToast {
+  background: #ef4444; /* ❌ Red */
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
-import { onAuthStateChanged, signOut, getIdTokenResult, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, getIdTokenResult, signOut, User } from "firebase/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -19,13 +19,21 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // 🟢 Force refresh token every time user logs in
+        await firebaseUser.getIdToken(true);
+
         const token = await getIdTokenResult(firebaseUser);
+        console.log("Claims:", token.claims);
+        console.log("User Email:", firebaseUser.email);
+        console.log("Full Token Result:", token);
+
+
         setUser(firebaseUser);
         setIsAdmin(!!token.claims.admin);
       } else {

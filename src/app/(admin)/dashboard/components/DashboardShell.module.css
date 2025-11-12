@@ -1,0 +1,14 @@
+.dashboardLayout {
+  display: flex;
+  background: #f4f5f7; /* same soft background as dashboard */
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  margin-left: 16rem; /* matches sidebar width */
+  padding: 2rem;
+  min-height: 100vh;
+  color: #000;
+  overflow-x: hidden;
+}

@@ -1,0 +1,56 @@
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 0.75rem 1.5rem;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+}
+
+.icon {
+  color: #6b7280;
+}
+
+.input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  color: #374151;
+  width: 16rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.info {
+  text-align: right;
+}
+
+.name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.role {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.avatar {
+  border-radius: 9999px;
+  border: 1px solid #e5e7eb;
+}

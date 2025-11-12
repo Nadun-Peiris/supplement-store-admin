@@ -1,0 +1,244 @@
+/* ───────────────────────────── Base Layout ───────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: #f4f5f7; /* soft neutral gray background */
+  min-height: 100vh;
+  color: #000 !important;
+  font-family: "Inter", sans-serif;
+}
+
+/* ───────────────────────────── Header ───────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.heading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.subtext {
+  color: #000;
+  opacity: 0.9;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.logoutBtn {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.logoutBtn:hover {
+  background: #dc2626;
+}
+
+/* ───────────────────────────── Stat Cards ───────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.4rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+}
+
+.card h2 {
+  font-size: 1rem;
+  color: #000;
+}
+
+.card p {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #000;
+  margin-top: 0.25rem;
+}
+
+/* ───────────────────────────── Table ───────────────────────────── */
+.tableWrapper {
+  background: #fff;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.subHeading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 0.75rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #000;
+}
+
+.table th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #000;
+}
+
+.empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 1rem;
+}
+
+/* ───────────────────────────── Status Tags ───────────────────────────── */
+.status {
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  display: inline-block;
+  text-transform: capitalize;
+}
+
+.pending {
+  background: #fff2e5;
+  color: #d97706;
+}
+
+.packed {
+  background: #fffde1;
+  color: #ca8a04;
+}
+
+.shipped {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.delivered {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ───────────────────────────── Drawer ───────────────────────────── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+}
+
+.drawer {
+  background: #fff;
+  width: 420px;
+  height: 100%;
+  padding: 1.75rem;
+  overflow-y: auto;
+  border-radius: 12px 0 0 12px;
+  animation: slideIn 0.3s ease forwards;
+  color: #000;
+  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.closeBtn {
+  background: #1e293b;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  margin-top: 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.closeBtn:hover {
+  background: #111827;
+}
+
+/* ───────────────────────────── Charts ───────────────────────────── */
+.chartContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.chartCard {
+  flex: 1;
+  min-width: 420px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  color: #000;
+}
+
+.recharts-text {
+  fill: #000 !important;
+}
+
+.recharts-tooltip-label {
+  color: #000 !important;
+}
+
+/* ───────────────────────────── Loading / Access Denied ───────────────────────────── */
+.loadingWrapper,
+.deniedWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  flex-direction: column;
+  color: #000;
+}
+
+.deniedWrapper h1 {
+  color: #b91c1c;
+  font-size: 1.5rem;
+}

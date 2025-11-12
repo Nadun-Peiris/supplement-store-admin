@@ -1,0 +1,76 @@
+/* ───────────────────────────── Sidebar Layout ───────────────────────────── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  width: 16rem;
+  background-color: #ffffff;
+  color: #000;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
+/* ───────────────────────────── Brand Section ───────────────────────────── */
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #111827;
+}
+
+/* ───────────────────────────── Nav Section ───────────────────────────── */
+.nav {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.link {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  margin: 0.25rem 0.75rem;
+  color: #111827;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.link:hover {
+  background-color: #f3f4f6;
+}
+
+.active {
+  background-color: #2563eb;
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+/* ───────────────────────────── Footer Section ───────────────────────────── */
+.footer {
+  border-top: 1px solid #f1f5f9;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+}
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #1f2937;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.logout:hover {
+  color: #ef4444;
+  transform: translateX(2px);
+}
