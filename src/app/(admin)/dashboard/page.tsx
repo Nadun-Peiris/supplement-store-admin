@@ -1,8 +1,20 @@
 "use client";
-
+import Notifications from "./components/Notifications";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, getIdTokenResult, signOut } from "firebase/auth";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import {
+  onAuthStateChanged,
+  getIdTokenResult,
+  signOut,
+} from "firebase/auth";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
@@ -18,6 +30,7 @@ import {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [userName, setUserName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +44,7 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
-  // 🔐 Verify admin
+  // 🔐 Verify admin + fetch Firestore user name
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
@@ -44,6 +57,16 @@ export default function DashboardPage() {
         const token = await getIdTokenResult(firebaseUser);
         setUserEmail(firebaseUser.email);
         setIsAdmin(!!token.claims.admin);
+
+        // 🔹 Fetch name from Firestore
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setUserName(data.name || null);
+        } else {
+          setUserName(null);
+        }
       } catch {
         setIsAdmin(false);
       } finally {
@@ -86,7 +109,6 @@ export default function DashboardPage() {
           }
         });
 
-        // Convert objects to arrays for charts
         const ordersData = Object.entries(monthlyOrders).map(([month, count]) => ({
           month,
           orders: count,
@@ -99,7 +121,6 @@ export default function DashboardPage() {
 
         setOrdersByMonth(ordersData);
         setTopProducts(productData);
-
         setTotalOrders(ordersSnap.size);
         setRevenue(total);
         setPending(pendingCount);
@@ -111,7 +132,11 @@ export default function DashboardPage() {
 
     const fetchRecentOrders = async () => {
       try {
-        const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(5));
+        const q = query(
+          collection(db, "orders"),
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
         const querySnapshot = await getDocs(q);
         const orders: any[] = [];
         querySnapshot.forEach((doc) => {
@@ -145,7 +170,13 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
-  if (loading) return <div className={styles.loadingWrapper}><p>Loading...</p></div>;
+  if (loading)
+    return (
+      <div className={styles.loadingWrapper}>
+        <p>Loading...</p>
+      </div>
+    );
+
   if (isAdmin === false)
     return (
       <div className={styles.deniedWrapper}>
@@ -160,22 +191,36 @@ export default function DashboardPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.heading}>Dashboard Overview</h1>
-          <p className={styles.subtext}>Welcome back, {userEmail}</p>
+          <p className={styles.subtext}>Welcome back, {userName || userEmail}</p>
         </div>
-        <button onClick={handleLogout} className={styles.logoutBtn}>
-          Log Out
-        </button>
+        
+        <div className={styles.headerRight}>
+          <Notifications />
+          <button onClick={handleLogout} className={styles.logoutBtn}>Log Out</button>
+        </div>
       </div>
 
       {/* Top Metrics */}
       <div className={styles.cards}>
-        <div className={styles.card}><h2>Total Orders</h2><p>{totalOrders}</p></div>
-        <div className={styles.card}><h2>Revenue</h2><p>LKR {revenue.toLocaleString()}</p></div>
-        <div className={styles.card}><h2>Pending</h2><p>{pending}</p></div>
-        <div className={styles.card}><h2>Delivered</h2><p>{delivered}</p></div>
+        <div className={styles.card}>
+          <h2>Total Orders</h2>
+          <p>{totalOrders}</p>
+        </div>
+        <div className={styles.card}>
+          <h2>Revenue</h2>
+          <p>LKR {revenue.toLocaleString()}</p>
+        </div>
+        <div className={styles.card}>
+          <h2>Pending</h2>
+          <p>{pending}</p>
+        </div>
+        <div className={styles.card}>
+          <h2>Delivered</h2>
+          <p>{delivered}</p>
+        </div>
       </div>
 
-      {/* Recent Orders */}
+      {/* Recent Orders Table */}
       <div className={styles.tableWrapper}>
         <h2 className={styles.subHeading}>Recent Orders</h2>
         <table className={styles.table}>
@@ -190,7 +235,11 @@ export default function DashboardPage() {
           </thead>
           <tbody>
             {recentOrders.length === 0 ? (
-              <tr><td colSpan={5} className={styles.empty}>No recent orders</td></tr>
+              <tr>
+                <td colSpan={5} className={styles.empty}>
+                  No recent orders
+                </td>
+              </tr>
             ) : (
               recentOrders.map((order) => (
                 <tr
@@ -203,7 +252,11 @@ export default function DashboardPage() {
                   <td>{order.createdAt}</td>
                   <td>{order.total.toLocaleString()}</td>
                   <td>
-                    <span className={`${styles.status} ${styles[order.status.toLowerCase()] || ""}`}>
+                    <span
+                      className={`${styles.status} ${
+                        styles[order.status.toLowerCase()] || ""
+                      }`}
+                    >
                       {order.status}
                     </span>
                   </td>
@@ -216,19 +269,39 @@ export default function DashboardPage() {
 
       {/* Drawer for Order Details */}
       {selectedOrder && (
-        <div className={styles.drawerOverlay} onClick={() => setSelectedOrder(null)}>
-          <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={styles.drawerOverlay}
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div
+            className={styles.drawer}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Order Details</h2>
-            <p><strong>Customer:</strong> {selectedOrder.customer}</p>
-            <p><strong>Email:</strong> {selectedOrder.email}</p>
-            <p><strong>Phone:</strong> {selectedOrder.phone}</p>
-            <p><strong>Date:</strong> {selectedOrder.createdAt}</p>
-            <p><strong>Address:</strong> {selectedOrder.address}</p>
-            <p><strong>Total:</strong> LKR {selectedOrder.total.toLocaleString()}</p>
+            <p>
+              <strong>Customer:</strong> {selectedOrder.customer}
+            </p>
+            <p>
+              <strong>Email:</strong> {selectedOrder.email}
+            </p>
+            <p>
+              <strong>Phone:</strong> {selectedOrder.phone}
+            </p>
+            <p>
+              <strong>Date:</strong> {selectedOrder.createdAt}
+            </p>
+            <p>
+              <strong>Address:</strong> {selectedOrder.address}
+            </p>
+            <p>
+              <strong>Total:</strong> LKR{" "}
+              {selectedOrder.total.toLocaleString()}
+            </p>
 
             <div className={styles.itemList}>
               <h3>Items</h3>
-              {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
+              {Array.isArray(selectedOrder.items) &&
+              selectedOrder.items.length > 0 ? (
                 selectedOrder.items.map((item: any, i: number) => (
                   <p key={i}>
                     {item.name || "Unnamed"} × {item.quantity || 1} — LKR{" "}
@@ -240,7 +313,10 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <button className={styles.closeBtn} onClick={() => setSelectedOrder(null)}>
+            <button
+              className={styles.closeBtn}
+              onClick={() => setSelectedOrder(null)}
+            >
               Close
             </button>
           </div>

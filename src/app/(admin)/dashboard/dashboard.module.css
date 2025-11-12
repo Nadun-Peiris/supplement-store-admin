@@ -242,3 +242,10 @@
   color: #b91c1c;
   font-size: 1.5rem;
 }
+
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}

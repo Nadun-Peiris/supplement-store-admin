@@ -12,6 +12,7 @@ const navItems = [
   { name: "Admins", href: "/dashboard/admins" },
   { name: "Users", href: "/dashboard/users" },
   { name: "Reports", href: "/dashboard/reports" },
+  { name: "Profile", href: "/dashboard/profile" },
   { name: "Settings", href: "/dashboard/settings" },
 ];
 

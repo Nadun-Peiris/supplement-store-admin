@@ -12,6 +12,8 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  getDocs,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "./products.module.css";
@@ -31,7 +33,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Add modal
+  // Modal states
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -73,6 +75,28 @@ export default function ProductsPage() {
     return () => unsubscribe();
   }, []);
 
+  // 🧠 Utility: avoid duplicate low-stock notifications
+  const sendLowStockNotification = async (name: string, stock: number) => {
+    try {
+      // Check if a recent notification already exists
+      const notifQuery = query(
+        collection(db, "notifications"),
+        where("message", "==", `${name} stock is running low (${stock} left)`)
+      );
+      const existing = await getDocs(notifQuery);
+      if (!existing.empty) return; // already notified
+
+      await addDoc(collection(db, "notifications"), {
+        type: "stock",
+        message: `${name} stock is running low (${stock} left)`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
+  };
+
   // 🔹 Add product
   const handleAddProduct = async () => {
     if (!form.name || !form.price || !form.category || !form.imageUrl) {
@@ -82,7 +106,7 @@ export default function ProductsPage() {
 
     setSubmitting(true);
     try {
-      await addDoc(collection(db, "products"), {
+      const newProduct = {
         name: form.name,
         category: form.category,
         price: Number(form.price),
@@ -90,7 +114,14 @@ export default function ProductsPage() {
         imageUrl: form.imageUrl,
         coaLink: form.coaLink || "",
         createdAt: serverTimestamp(),
-      });
+      };
+
+      await addDoc(collection(db, "products"), newProduct);
+
+      // ⚠️ Low stock notification
+      if (Number(form.stock) < 5) {
+        await sendLowStockNotification(form.name, Number(form.stock));
+      }
 
       setForm({
         name: "",
@@ -123,6 +154,12 @@ export default function ProductsPage() {
         imageUrl: editProduct.imageUrl,
         coaLink: editProduct.coaLink || "",
       });
+
+      // ⚠️ Low stock check
+      if (editProduct.stock < 5) {
+        await sendLowStockNotification(editProduct.name, editProduct.stock);
+      }
+
       setEditProduct(null);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -142,6 +179,23 @@ export default function ProductsPage() {
     }
   };
 
+  // 🕒 Auto-delete old low-stock notifications (after 30 mins)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const now = new Date();
+      const snap = await getDocs(collection(db, "notifications"));
+      snap.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.type === "stock" && data.createdAt?.toDate) {
+          const mins =
+            (now.getTime() - data.createdAt.toDate().getTime()) / (1000 * 60);
+          if (mins > 30) await deleteDoc(doc(db, "notifications", docSnap.id));
+        }
+      });
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (loading) {
     return (
       <div className={styles.loading}>
@@ -152,6 +206,7 @@ export default function ProductsPage() {
 
   return (
     <section className={styles.section}>
+      {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.heading}>Products</h1>
         <button className={styles.addBtn} onClick={() => setShowModal(true)}>
@@ -159,6 +214,7 @@ export default function ProductsPage() {
         </button>
       </div>
 
+      {/* Table */}
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
@@ -192,7 +248,11 @@ export default function ProductsPage() {
                   <td>{product.name}</td>
                   <td>{product.category}</td>
                   <td>{product.price.toLocaleString()}</td>
-                  <td>{product.stock}</td>
+                  <td
+                    className={product.stock < 5 ? styles.lowStock : undefined}
+                  >
+                    {product.stock}
+                  </td>
                   <td>
                     {product.coaLink ? (
                       <a
@@ -228,47 +288,30 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      {/* 🪄 Add Product Modal */}
+      {/* 🪄 Add Modal */}
       {showModal && (
         <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2>Add New Product</h2>
-            <input
-              type="text"
-              placeholder="Product Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Category"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            />
-            <input
-              type="number"
-              placeholder="Price (LKR)"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-            />
-            <input
-              type="number"
-              placeholder="Stock"
-              value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="/products/image-name.png"
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="COA Link (optional)"
-              value={form.coaLink}
-              onChange={(e) => setForm({ ...form, coaLink: e.target.value })}
-            />
+            {["name", "category", "price", "stock", "imageUrl", "coaLink"].map(
+              (field) => (
+                <input
+                  key={field}
+                  type={field === "price" || field === "stock" ? "number" : "text"}
+                  placeholder={
+                    field === "imageUrl"
+                      ? "/products/image-name.png"
+                      : field === "coaLink"
+                      ? "COA Link (optional)"
+                      : field[0].toUpperCase() + field.slice(1)
+                  }
+                  value={(form as any)[field]}
+                  onChange={(e) =>
+                    setForm({ ...form, [field]: e.target.value })
+                  }
+                />
+              )
+            )}
             <div className={styles.modalActions}>
               <button
                 className={styles.cancelBtn}
@@ -288,7 +331,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* ✏️ Edit Product Modal */}
+      {/* ✏️ Edit Modal */}
       {editProduct && (
         <div className={styles.modalOverlay} onClick={() => setEditProduct(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -298,50 +341,24 @@ export default function ProductsPage() {
               alt={editProduct.name}
               className={styles.productPreview}
             />
-            <input
-              type="text"
-              value={editProduct.name}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, name: e.target.value })
-              }
-            />
-            <input
-              type="text"
-              value={editProduct.category}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, category: e.target.value })
-              }
-            />
-            <input
-              type="number"
-              value={editProduct.price}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, price: Number(e.target.value) })
-              }
-            />
-            <input
-              type="number"
-              value={editProduct.stock}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, stock: Number(e.target.value) })
-              }
-            />
-            <input
-              type="text"
-              value={editProduct.imageUrl}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, imageUrl: e.target.value })
-              }
-              placeholder="/products/image.png"
-            />
-            <input
-              type="text"
-              value={editProduct.coaLink || ""}
-              onChange={(e) =>
-                setEditProduct({ ...editProduct, coaLink: e.target.value })
-              }
-              placeholder="COA Link"
-            />
+            {["name", "category", "price", "stock", "imageUrl", "coaLink"].map(
+              (field) => (
+                <input
+                  key={field}
+                  type={field === "price" || field === "stock" ? "number" : "text"}
+                  value={(editProduct as any)[field] || ""}
+                  onChange={(e) =>
+                    setEditProduct({
+                      ...editProduct,
+                      [field]:
+                        field === "price" || field === "stock"
+                          ? Number(e.target.value)
+                          : e.target.value,
+                    })
+                  }
+                />
+              )
+            )}
             <div className={styles.modalActions}>
               <button
                 className={styles.cancelBtn}
@@ -376,7 +393,10 @@ export default function ProductsPage() {
               >
                 Cancel
               </button>
-              <button className={styles.deleteConfirmBtn} onClick={handleDeleteProduct}>
+              <button
+                className={styles.deleteConfirmBtn}
+                onClick={handleDeleteProduct}
+              >
                 Delete
               </button>
             </div>
