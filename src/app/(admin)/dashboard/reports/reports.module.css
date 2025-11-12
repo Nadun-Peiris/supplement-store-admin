@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem 2rem;
   color: #000;
 }
 
@@ -63,7 +63,7 @@
 
 .chartBox {
   flex: 1;
-  min-width: 400px;
+  min-width: 320px;
   background: #fff;
   border-radius: 10px;
   padding: 1.5rem;
@@ -106,4 +106,29 @@
 
 .downloadBtn:hover {
   background: #1d4ed8;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .chartBox {
+    min-width: 100%;
+    padding: 1.25rem;
+  }
 }

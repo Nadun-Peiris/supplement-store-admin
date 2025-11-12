@@ -53,10 +53,10 @@ export default function SettingsPage() {
   if (loading) return <p className={styles.loading}>Loading settings...</p>;
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} space-y-6`}>
       <h1 className={styles.heading}>Store Settings</h1>
 
-      <div className={styles.form}>
+      <div className={`${styles.form} max-w-3xl`}>
         <label>Store Name</label>
         <input
           type="text"
@@ -94,7 +94,7 @@ export default function SettingsPage() {
 
         <button
           onClick={handleSave}
-          className={styles.saveBtn}
+          className={`${styles.saveBtn} w-full sm:w-auto`}
           disabled={saving}
         >
           {saving ? "Saving..." : "Save Settings"}

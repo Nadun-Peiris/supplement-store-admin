@@ -85,6 +85,8 @@
   margin-top: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
 }
 
 .subHeading {
@@ -211,7 +213,7 @@
 
 .chartCard {
   flex: 1;
-  min-width: 420px;
+  min-width: 360px;
   background: #fff;
   border-radius: 12px;
   padding: 1.5rem;
@@ -248,4 +250,63 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .section {
+    padding: 1.5rem 1.25rem 2rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tableWrapper {
+    padding: 1rem;
+    margin: 0 -0.5rem;
+    border-radius: 12px;
+  }
+
+  .table {
+    min-width: 640px;
+  }
+
+  .drawer {
+    width: 100%;
+    border-radius: 0;
+  }
+
+  .chartContainer {
+    flex-direction: column;
+  }
+
+  .chartCard {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .chartCard,
+  .tableWrapper {
+    box-shadow: none;
+  }
+
+  .drawer {
+    padding: 1.25rem;
+  }
 }

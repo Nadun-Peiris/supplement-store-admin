@@ -63,10 +63,10 @@ export default function ManageAdminsPage() {
   };
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} space-y-6`}>
       <h1 className={styles.heading}>Manage Admins</h1>
 
-      <div className={styles.form}>
+      <div className={`${styles.form} max-w-2xl`}>
         <input
           type="email"
           value={email}
@@ -74,18 +74,20 @@ export default function ManageAdminsPage() {
           placeholder="Enter user email"
           className={styles.input}
         />
-        <div className={styles.buttons}>
+        <div
+          className={`${styles.buttons} flex-col gap-3 sm:flex-row sm:items-center`}
+        >
           <button
             onClick={() => updateRole(true)}
             disabled={loading}
-            className={`${styles.btn} ${styles.addBtn}`}
+            className={`${styles.btn} ${styles.addBtn} w-full sm:w-auto`}
           >
             Make Admin
           </button>
           <button
             onClick={() => updateRole(false)}
             disabled={loading}
-            className={`${styles.btn} ${styles.removeBtn}`}
+            className={`${styles.btn} ${styles.removeBtn} w-full sm:w-auto`}
           >
             Remove Admin
           </button>
@@ -94,9 +96,9 @@ export default function ManageAdminsPage() {
 
       {message && <p className={styles.message}>{message}</p>}
 
-      <div className={styles.tableWrapper}>
+      <div className={`${styles.tableWrapper} overflow-x-auto`}>
         <h2 className={styles.subHeading}>Current Admins</h2>
-        <table className={styles.table}>
+        <table className={`${styles.table} min-w-[280px]`}>
           <thead>
             <tr>
               <th>Email</th>

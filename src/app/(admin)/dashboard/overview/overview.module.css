@@ -1,5 +1,5 @@
 .section {
-  padding: 1.5rem;
+  padding: 1.5rem 1.25rem 2rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -70,8 +70,8 @@
 
 .charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
 }
 
 .chartBox {
@@ -86,4 +86,23 @@
   font-weight: 600;
   margin-bottom: 1rem;
   color: #000;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 1.25rem 1rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .statusSummary {
+    padding: 1.25rem;
+  }
+
+  .chartBox {
+    padding: 1.25rem;
+  }
 }

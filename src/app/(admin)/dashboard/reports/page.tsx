@@ -138,15 +138,19 @@ export default function ReportsPage() {
   if (loading) return <p className={styles.loading}>Loading analytics...</p>;
 
   return (
-    <section className={styles.section}>
-      <div className={styles.header}>
+    <section className={`${styles.section} space-y-6`}>
+      <div
+        className={`${styles.header} flex-col gap-4 lg:flex-row lg:items-center lg:justify-between`}
+      >
         <h1 className={styles.heading}>Reports & Analytics</h1>
 
-        <div className={styles.actions}>
+        <div
+          className={`${styles.actions} w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto`}
+        >
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className={styles.filter}
+            className={`${styles.filter} w-full sm:w-auto`}
           >
             <option value="today">Today</option>
             <option value="week">This Week</option>
@@ -154,14 +158,17 @@ export default function ReportsPage() {
             <option value="all">All Time</option>
           </select>
 
-          <button onClick={handleDownloadPDF} className={styles.downloadBtn}>
+          <button
+            onClick={handleDownloadPDF}
+            className={`${styles.downloadBtn} w-full sm:w-auto`}
+          >
             Download PDF
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className={styles.cards}>
+      <div className={`${styles.cards} gap-4`}>
         <div className={styles.card}>
           <h2>Total Revenue</h2>
           <p>LKR {totalRevenue.toLocaleString()}</p>
@@ -177,8 +184,8 @@ export default function ReportsPage() {
       </div>
 
       {/* Charts */}
-      <div className={styles.charts}>
-        <div className={styles.chartBox}>
+      <div className={`${styles.charts} flex-col gap-4 xl:flex-row`}>
+        <div className={`${styles.chartBox} min-h-[320px]`}>
           <h3>Revenue Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dailyData}>
@@ -191,7 +198,7 @@ export default function ReportsPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className={styles.chartBox}>
+        <div className={`${styles.chartBox} min-h-[320px]`}>
           <h3>Top 5 Selling Products</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={topProducts}>

@@ -205,18 +205,23 @@ export default function ProductsPage() {
   }
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} space-y-6`}>
       {/* Header */}
-      <div className={styles.header}>
+      <div
+        className={`${styles.header} flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}
+      >
         <h1 className={styles.heading}>Products</h1>
-        <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+        <button
+          className={`${styles.addBtn} w-full sm:w-auto`}
+          onClick={() => setShowModal(true)}
+        >
           + Add Product
         </button>
       </div>
 
       {/* Table */}
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
+      <div className={`${styles.tableWrapper} overflow-x-auto`}>
+        <table className={`${styles.table} min-w-[720px]`}>
           <thead>
             <tr>
               <th>Image</th>
@@ -290,8 +295,14 @@ export default function ProductsPage() {
 
       {/* 🪄 Add Modal */}
       {showModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${styles.modalOverlay} px-4`}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className={`${styles.modal} w-full max-w-md sm:max-w-lg`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Add New Product</h2>
             {["name", "category", "price", "stock", "imageUrl", "coaLink"].map(
               (field) => (
@@ -333,8 +344,14 @@ export default function ProductsPage() {
 
       {/* ✏️ Edit Modal */}
       {editProduct && (
-        <div className={styles.modalOverlay} onClick={() => setEditProduct(null)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${styles.modalOverlay} px-4`}
+          onClick={() => setEditProduct(null)}
+        >
+          <div
+            className={`${styles.modal} w-full max-w-md sm:max-w-lg`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Edit Product</h2>
             <img
               src={editProduct.imageUrl}
@@ -377,10 +394,13 @@ export default function ProductsPage() {
       {/* 🗑️ Delete Confirmation */}
       {confirmDelete && (
         <div
-          className={styles.modalOverlay}
+          className={`${styles.modalOverlay} px-4`}
           onClick={() => setConfirmDelete(null)}
         >
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={`${styles.modal} w-full max-w-md sm:max-w-lg`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Delete Product</h2>
             <p>
               Are you sure you want to delete{" "}

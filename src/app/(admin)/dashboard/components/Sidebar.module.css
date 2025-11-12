@@ -12,15 +12,43 @@
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 100;
+  z-index: 90;
+  background-image: linear-gradient(180deg, #fff, #f8fafc 80%);
+}
+
+.sidebarBody {
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* ───────────────────────────── Brand Section ───────────────────────────── */
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+}
+
 .brand {
   font-size: 1.25rem;
   font-weight: 700;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  color: #111827;
+}
+
+.closeSidebarBtn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  padding: 0.5rem 1rem 0.5rem 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.closeSidebarBtn:hover {
   color: #111827;
 }
 
@@ -77,4 +105,43 @@
 .logout:hover {
   color: #ef4444;
   transform: translateX(2px);
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .open {
+    transform: translateX(0);
+  }
+
+  .sidebarBody {
+    padding-bottom: 4rem;
+  }
+}
+
+/* Close button — hidden on desktop */
+.closeSidebarBtn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  padding: 0.5rem 1rem 0.5rem 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.closeSidebarBtn:hover {
+  color: #111827;
+}
+
+/* 🧠 Hide close button on screens ≥1024px (desktop) */
+@media (min-width: 1024px) {
+  .closeSidebarBtn {
+    display: none !important;
+  }
 }

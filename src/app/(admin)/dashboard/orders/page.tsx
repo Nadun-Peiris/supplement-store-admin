@@ -150,21 +150,25 @@ export default function OrdersPage() {
   }
 
   return (
-    <section className={styles.section}>
-      <div className={styles.header}>
+    <section className={`${styles.section} space-y-6`}>
+      <div
+        className={`${styles.header} flex-col gap-4 lg:flex-row lg:items-center lg:justify-between`}
+      >
         <h1 className={styles.heading}>Orders</h1>
-        <div className={styles.controls}>
+        <div
+          className={`${styles.controls} w-full flex-col gap-3 sm:flex-row sm:items-center`}
+        >
           <input
             type="text"
             placeholder="Search by customer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.search}
+            className={`${styles.search} w-full sm:flex-1`}
           />
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className={styles.select}
+            className={`${styles.select} w-full sm:w-48`}
           >
             <option value="All">All</option>
             <option value="Pending">Pending</option>
@@ -176,8 +180,8 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
+      <div className={`${styles.tableWrapper} overflow-x-auto`}>
+        <table className={`${styles.table} min-w-[720px] lg:min-w-[960px]`}>
           <thead>
             <tr>
               <th>Order ID</th>
@@ -225,8 +229,14 @@ export default function OrdersPage() {
 
       {/* Drawer */}
       {selectedOrder && (
-        <div className={styles.drawerOverlay} onClick={closeDrawer}>
-          <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${styles.drawerOverlay} px-4`}
+          onClick={closeDrawer}
+        >
+          <div
+            className={`${styles.drawer} w-full max-w-lg sm:max-w-xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button className={styles.closeIcon} onClick={closeDrawer}>
               ✕
             </button>

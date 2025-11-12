@@ -74,10 +74,10 @@ export default function ProfilePage() {
     );
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} space-y-6`}>
       <h1 className={styles.heading}>Profile Settings</h1>
 
-      <div className={styles.form}>
+      <div className={`${styles.form} max-w-2xl`}>
         <label>Email (cannot be changed)</label>
         <input type="email" value={user.email} disabled />
 
@@ -90,14 +90,14 @@ export default function ProfilePage() {
 
         <button
           onClick={handleProfileSave}
-          className={styles.saveBtn}
+          className={`${styles.saveBtn} w-full sm:w-auto`}
           disabled={saving}
         >
           {saving ? "Saving..." : "Save Profile"}
         </button>
       </div>
 
-      <div className={styles.form}>
+      <div className={`${styles.form} max-w-2xl`}>
         <h2 className={styles.subheading}>Change Password</h2>
         <input
           type="password"
@@ -113,14 +113,14 @@ export default function ProfilePage() {
         />
         <button
           onClick={handlePasswordChange}
-          className={styles.saveBtn}
+          className={`${styles.saveBtn} w-full sm:w-auto`}
           disabled={saving}
         >
           {saving ? "Updating..." : "Update Password"}
         </button>
       </div>
 
-      {message && <p className={styles.message}>{message}</p>}
+      {message && <p className={`${styles.message} max-w-2xl`}>{message}</p>}
     </section>
   );
 }

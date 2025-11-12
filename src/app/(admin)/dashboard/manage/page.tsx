@@ -36,8 +36,8 @@ export default function ManageAdminsPage() {
   };
 
   return (
-    <main className={styles.container}>
-      <div className={styles.card}>
+    <main className={`${styles.container} px-4`}>
+      <div className={`${styles.card} w-full max-w-md`}>
         <h1 className={styles.title}>Manage Admins</h1>
         <input
           type="email"
@@ -46,18 +46,20 @@ export default function ManageAdminsPage() {
           placeholder="Enter user email"
           className={styles.input}
         />
-        <div className={styles.buttonGroup}>
+        <div
+          className={`${styles.buttonGroup} flex-col gap-3 sm:flex-row sm:items-center`}
+        >
           <button
             onClick={() => updateRole(true)}
             disabled={loading}
-            className={`${styles.button} ${styles.makeBtn}`}
+            className={`${styles.button} ${styles.makeBtn} w-full sm:w-auto`}
           >
             {loading ? "Processing..." : "Make Admin"}
           </button>
           <button
             onClick={() => updateRole(false)}
             disabled={loading}
-            className={`${styles.button} ${styles.removeBtn}`}
+            className={`${styles.button} ${styles.removeBtn} w-full sm:w-auto`}
           >
             {loading ? "Processing..." : "Remove Admin"}
           </button>

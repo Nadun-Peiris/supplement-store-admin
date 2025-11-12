@@ -106,11 +106,11 @@ export default function OverviewPage() {
   const COLORS = ["#f59e0b", "#eab308", "#8b5cf6", "#22c55e", "#ef4444"];
 
   return (
-    <section className={styles.section}>
-      <h1 className={styles.title}>Admin Overview Dashboard</h1>
+    <section className={`${styles.section} space-y-6`}>
+      <h1 className={`${styles.title} text-balance`}>Admin Overview Dashboard</h1>
 
       {/* Top Summary Cards */}
-      <div className={styles.cards}>
+      <div className={`${styles.cards} gap-4`}>
         <div className={styles.card}>
           <h3>Total Orders</h3>
           <p>{totalOrders}</p>
@@ -130,7 +130,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Status Summary Chart */}
-      <div className={styles.statusSummary}>
+      <div className={`${styles.statusSummary} rounded-2xl border border-slate-100`}>
         <h2>Order Status Summary</h2>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={statusData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
@@ -144,8 +144,8 @@ export default function OverviewPage() {
       </div>
 
       {/* Charts Section */}
-      <div className={styles.charts}>
-        <div className={styles.chartBox}>
+      <div className={`${styles.charts} gap-4`}>
+        <div className={`${styles.chartBox} min-h-[320px]`}>
           <h2>Order Distribution</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -167,7 +167,7 @@ export default function OverviewPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className={styles.chartBox}>
+        <div className={`${styles.chartBox} min-h-[320px]`}>
           <h2>Monthly Revenue Growth</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyRevenue}>

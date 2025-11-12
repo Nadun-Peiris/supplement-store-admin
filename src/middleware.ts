@@ -1,8 +1,8 @@
-export const runtime = "nodejs"; // ✅ Enables Firebase Admin in middleware
+export const runtime = "nodejs"; // ✅ Required for Firebase Admin in middleware
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyIdToken } from "@/utils/verifyToken";
+import { verifyToken } from "@/utils/verifyToken"; // ✅ fixed import name
 
 // ✅ Define all protected admin routes
 const protectedRoutes = [
@@ -18,39 +18,39 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const token = req.cookies.get("firebaseToken")?.value;
 
-  // Allow free access to /login and site root
+  // Allow public access to home and login
   if (url.pathname === "/" || url.pathname.startsWith("/login")) {
     return NextResponse.next();
   }
 
-  // 🔐 Protect admin routes
+  // 🔒 Protect admin routes
   if (protectedRoutes.some((path) => url.pathname.startsWith(path))) {
     if (!token) {
-      // No cookie → redirect to login
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
     try {
-      const decoded = await verifyIdToken(token);
-      if (decoded) {
-        return NextResponse.next(); // ✅ Authorized
+      const decoded = await verifyToken(token);
+      if (decoded && decoded.email) {
+        // ✅ Authorized user
+        return NextResponse.next();
       } else {
         url.pathname = "/login";
         return NextResponse.redirect(url);
       }
     } catch (err) {
-      console.error("Token verification failed:", err);
+      console.error("❌ Token verification failed:", err);
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
   }
 
-  // All other public routes
+  // ✅ All other routes proceed normally
   return NextResponse.next();
 }
 
-// ✅ Apply to all admin-related routes
+// ✅ Only apply to admin-related routes
 export const config = {
   matcher: [
     "/dashboard/:path*",

@@ -165,21 +165,30 @@ export default function DashboardPage() {
     );
 
   return (
-    <section className={styles.section}>
-      <div className={styles.header}>
+    <section className={`${styles.section} space-y-6 lg:space-y-8`}>
+      <div
+        className={`${styles.header} flex-col gap-4 lg:flex-row lg:items-center lg:justify-between`}
+      >
         <div>
           <h1 className={styles.heading}>Dashboard Overview</h1>
           <p className={styles.subtext}>Welcome back, {userName || userEmail}</p>
         </div>
 
-        <div className={styles.headerRight}>
+        <div
+          className={`${styles.headerRight} w-full flex-wrap justify-between gap-3 sm:flex-row lg:w-auto`}
+        >
           <Notifications />
-          <button onClick={handleLogout} className={styles.logoutBtn}>Log Out</button>
+          <button
+            onClick={handleLogout}
+            className={`${styles.logoutBtn} w-full sm:w-auto`}
+          >
+            Log Out
+          </button>
         </div>
       </div>
 
       {/* Cards */}
-      <div className={styles.cards}>
+      <div className={`${styles.cards} w-full`}>
         <div className={styles.card}><h2>Total Orders</h2><p>{totalOrders}</p></div>
         <div className={styles.card}><h2>Revenue</h2><p>LKR {revenue.toLocaleString()}</p></div>
         <div className={styles.card}><h2>Pending</h2><p>{pending}</p></div>
@@ -187,9 +196,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Table */}
-      <div className={styles.tableWrapper}>
+      <div className={`${styles.tableWrapper} overflow-x-auto`}>
         <h2 className={styles.subHeading}>Recent Orders</h2>
-        <table className={styles.table}>
+        <table className={`${styles.table} min-w-[720px]`}>
           <thead>
             <tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total (LKR)</th><th>Status</th></tr>
           </thead>
@@ -217,8 +226,14 @@ export default function DashboardPage() {
 
       {/* Drawer */}
       {selectedOrder && (
-        <div className={styles.drawerOverlay} onClick={() => setSelectedOrder(null)}>
-          <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${styles.drawerOverlay} px-4`}
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div
+            className={`${styles.drawer} w-full max-w-lg sm:max-w-xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Order Details</h2>
             <p><strong>Customer:</strong> {selectedOrder.customer}</p>
             <p><strong>Email:</strong> {selectedOrder.email}</p>

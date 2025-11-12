@@ -2,13 +2,46 @@
   display: flex;
   background: #f4f5f7; /* same soft background as dashboard */
   min-height: 100vh;
+  position: relative;
+}
+
+.content {
+  flex: 1;
+  margin-left: 0;
+  width: 100%;
+  transition: margin-left 0.25s ease;
 }
 
 .main {
   flex: 1;
-  margin-left: 16rem; /* matches sidebar width */
-  padding: 2rem;
-  min-height: 100vh;
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+  min-height: calc(100vh - 4rem);
   color: #000;
   overflow-x: hidden;
+}
+
+.sidebarOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 80;
+  border: none;
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .content {
+    margin-left: 16rem; /* matches sidebar width */
+    width: calc(100% - 16rem);
+  }
+
+  .main {
+    padding-top: 2rem;
+    min-height: 100vh;
+  }
+
+  .sidebarOverlay {
+    display: none;
+  }
 }

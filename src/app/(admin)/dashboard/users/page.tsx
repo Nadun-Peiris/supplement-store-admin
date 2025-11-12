@@ -108,26 +108,33 @@ export default function UsersPage() {
   }
 
   return (
-    <section className={styles.section}>
-      <div className={styles.header}>
+    <section className={`${styles.section} space-y-6`}>
+      <div
+        className={`${styles.header} flex-col gap-4 lg:flex-row lg:items-center lg:justify-between`}
+      >
         <h1 className={styles.heading}>Customers</h1>
 
-        <div className={styles.controls}>
+        <div
+          className={`${styles.controls} w-full flex-col gap-3 sm:flex-row sm:items-center`}
+        >
           <input
             type="text"
             placeholder="Search name, email, phone, or date..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.search}
+            className={`${styles.search} w-full sm:flex-1`}
           />
-          <button className={styles.searchBtn} onClick={handleSearch}>
+          <button
+            className={`${styles.searchBtn} w-full sm:w-auto`}
+            onClick={handleSearch}
+          >
             Search
           </button>
 
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className={styles.select}
+            className={`${styles.select} w-full sm:w-48`}
           >
             <option value="orders">Sort by Orders</option>
             <option value="date">Sort by Joined Date</option>
@@ -135,8 +142,8 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
+      <div className={`${styles.tableWrapper} overflow-x-auto`}>
+        <table className={`${styles.table} min-w-[720px]`}>
           <thead>
             <tr>
               <th>Name</th>
@@ -170,7 +177,7 @@ export default function UsersPage() {
 
       {/* Pagination Controls */}
       {filteredUsers.length > usersPerPage && (
-        <div className={styles.pagination}>
+        <div className={`${styles.pagination} flex-wrap gap-3`}>
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage === 1}

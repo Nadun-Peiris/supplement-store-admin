@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, X } from "lucide-react";
 import styles from "./Sidebar.module.css";
 
 const navItems = [
@@ -16,13 +16,38 @@ const navItems = [
   { name: "Settings", href: "/dashboard/settings" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  closeSidebar: () => void;
+}
+
+export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
   const pathname = usePathname();
+  const handleNavigate = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      closeSidebar();
+    }
+  };
 
   return (
-    <aside className={styles.sidebar}>
-      <div>
+    <aside
+      className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}
+    >
+      <div className={styles.mobileHeader}>
         <h1 className={styles.brand}>Supplement Admin</h1>
+
+        {/* 👇 Close button (visible only on mobile) */}
+        <button
+          type="button"
+          className={styles.closeSidebarBtn}
+          aria-label="Close sidebar"
+          onClick={closeSidebar}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className={styles.sidebarBody}>
         <nav className={styles.nav}>
           {navItems.map((item) => (
             <Link
@@ -31,6 +56,7 @@ export default function Sidebar() {
               className={`${styles.link} ${
                 pathname === item.href ? styles.active : ""
               }`}
+              onClick={handleNavigate}
             >
               {item.name}
             </Link>
