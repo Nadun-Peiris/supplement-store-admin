@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic"; // ✅ Dynamic import for SSR safety
+import dynamic from "next/dynamic";
 import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -9,7 +9,7 @@ import {
 import { auth } from "@/lib/firebase";
 import styles from "./login.module.css";
 
-// ✅ Dynamically load Player (client-only)
+// ✅ Dynamically import Lottie Player (client-only)
 const Player = dynamic(
   () => import("@lottiefiles/react-lottie-player").then((mod) => mod.Player),
   { ssr: false }
@@ -25,11 +25,11 @@ export default function LoginPage() {
   const [resetMode, setResetMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  // 🌀 Fade transition between loader and login form
+  // 🌀 Loader transition animation
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-      setTimeout(() => setShowForm(true), 300); // Show form after fade
+      setTimeout(() => setShowForm(true), 300);
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
@@ -42,9 +42,21 @@ export default function LoginPage() {
     setMessage("");
 
     try {
+      // Firebase Auth login
       await signInWithEmailAndPassword(auth, email, password);
+
+      // ✅ Get Firebase ID token
+      const token = await auth.currentUser?.getIdToken();
+
+      // ✅ Store token in secure cookie for middleware auth
+      if (token) {
+        document.cookie = `firebaseToken=${token}; path=/; max-age=3600; Secure; SameSite=Strict`;
+      }
+
+      // Redirect to dashboard
       window.location.href = "/dashboard";
-    } catch {
+    } catch (err: any) {
+      console.error(err);
       setError("❌ Invalid email or password. Please try again.");
     } finally {
       setSubmitting(false);
@@ -76,17 +88,21 @@ export default function LoginPage() {
     <main className={styles.main}>
       {/* 🌀 Loading Animation */}
       {loading && (
-        <div className={`${styles.loaderWrapper} ${!loading ? styles.fadeOut : ""}`}>
+        <div
+          className={`${styles.loaderWrapper} ${
+            !loading ? styles.fadeOut : ""
+          }`}
+        >
           <Player
             autoplay
             loop
-            src="/animations/loading.json"  // ✅ make sure path is /public/animations/loading.json
+            src="/animations/loading.json" // ensure this file is in /public/animations/
             className={styles.lottiePlayer}
           />
         </div>
       )}
 
-      {/* 🔐 Login Form */}
+      {/* 🔐 Login / Reset Form */}
       {showForm && (
         <form
           onSubmit={handleLogin}
@@ -138,7 +154,7 @@ export default function LoginPage() {
             </button>
           )}
 
-          {/* Forgot Password */}
+          {/* Forgot Password Toggle */}
           <p className={styles.forgotText}>
             <button
               type="button"
@@ -149,7 +165,7 @@ export default function LoginPage() {
             </button>
           </p>
 
-          {/* Messages */}
+          {/* Feedback */}
           {error && <p className={styles.error}>{error}</p>}
           {message && <p className={styles.success}>{message}</p>}
         </form>

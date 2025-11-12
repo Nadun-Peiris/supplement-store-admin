@@ -1,32 +1,12 @@
 "use client";
 import Notifications from "./components/Notifications";
 import { useEffect, useState } from "react";
-import {
-  onAuthStateChanged,
-  getIdTokenResult,
-  signOut,
-} from "firebase/auth";
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { onAuthStateChanged, getIdTokenResult, signOut } from "firebase/auth";
+import { collection, getDocs, query, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -57,6 +37,10 @@ export default function DashboardPage() {
         const token = await getIdTokenResult(firebaseUser);
         setUserEmail(firebaseUser.email);
         setIsAdmin(!!token.claims.admin);
+
+        // ✅ Store Firebase token in cookie for middleware
+        const idToken = await firebaseUser.getIdToken();
+        document.cookie = `firebaseToken=${idToken}; path=/; max-age=3600; Secure; SameSite=Strict`;
 
         // 🔹 Fetch name from Firestore
         const userRef = doc(db, "users", firebaseUser.uid);
@@ -94,17 +78,14 @@ export default function DashboardPage() {
           if (data.status === "Pending") pendingCount++;
           if (data.status === "Delivered") deliveredCount++;
 
-          const date = data.createdAt?.toDate
-            ? data.createdAt.toDate()
-            : new Date();
+          const date = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
           const month = date.toLocaleString("default", { month: "short" });
           monthlyOrders[month] = (monthlyOrders[month] || 0) + 1;
 
           if (Array.isArray(data.items)) {
             data.items.forEach((item: any) => {
               const name = item.name || "Unnamed";
-              productSales[name] =
-                (productSales[name] || 0) + (item.quantity || 0);
+              productSales[name] = (productSales[name] || 0) + (item.quantity || 0);
             });
           }
         });
@@ -132,11 +113,7 @@ export default function DashboardPage() {
 
     const fetchRecentOrders = async () => {
       try {
-        const q = query(
-          collection(db, "orders"),
-          orderBy("createdAt", "desc"),
-          limit(5)
-        );
+        const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(5));
         const querySnapshot = await getDocs(q);
         const orders: any[] = [];
         querySnapshot.forEach((doc) => {
@@ -165,8 +142,10 @@ export default function DashboardPage() {
     fetchRecentOrders();
   }, []);
 
+  // 🚪 Handle logout (clear token + redirect)
   const handleLogout = async () => {
     await signOut(auth);
+    document.cookie = "firebaseToken=; path=/; max-age=0"; // clear cookie
     router.push("/login");
   };
 
@@ -187,76 +166,45 @@ export default function DashboardPage() {
 
   return (
     <section className={styles.section}>
-      {/* Header */}
       <div className={styles.header}>
         <div>
           <h1 className={styles.heading}>Dashboard Overview</h1>
           <p className={styles.subtext}>Welcome back, {userName || userEmail}</p>
         </div>
-        
+
         <div className={styles.headerRight}>
           <Notifications />
           <button onClick={handleLogout} className={styles.logoutBtn}>Log Out</button>
         </div>
       </div>
 
-      {/* Top Metrics */}
+      {/* Cards */}
       <div className={styles.cards}>
-        <div className={styles.card}>
-          <h2>Total Orders</h2>
-          <p>{totalOrders}</p>
-        </div>
-        <div className={styles.card}>
-          <h2>Revenue</h2>
-          <p>LKR {revenue.toLocaleString()}</p>
-        </div>
-        <div className={styles.card}>
-          <h2>Pending</h2>
-          <p>{pending}</p>
-        </div>
-        <div className={styles.card}>
-          <h2>Delivered</h2>
-          <p>{delivered}</p>
-        </div>
+        <div className={styles.card}><h2>Total Orders</h2><p>{totalOrders}</p></div>
+        <div className={styles.card}><h2>Revenue</h2><p>LKR {revenue.toLocaleString()}</p></div>
+        <div className={styles.card}><h2>Pending</h2><p>{pending}</p></div>
+        <div className={styles.card}><h2>Delivered</h2><p>{delivered}</p></div>
       </div>
 
-      {/* Recent Orders Table */}
+      {/* Table */}
       <div className={styles.tableWrapper}>
         <h2 className={styles.subHeading}>Recent Orders</h2>
         <table className={styles.table}>
           <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Total (LKR)</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Total (LKR)</th><th>Status</th></tr>
           </thead>
           <tbody>
             {recentOrders.length === 0 ? (
-              <tr>
-                <td colSpan={5} className={styles.empty}>
-                  No recent orders
-                </td>
-              </tr>
+              <tr><td colSpan={5} className={styles.empty}>No recent orders</td></tr>
             ) : (
               recentOrders.map((order) => (
-                <tr
-                  key={order.id}
-                  onClick={() => setSelectedOrder(order)}
-                  className={styles.clickableRow}
-                >
+                <tr key={order.id} onClick={() => setSelectedOrder(order)} className={styles.clickableRow}>
                   <td>{order.id}</td>
                   <td>{order.customer}</td>
                   <td>{order.createdAt}</td>
                   <td>{order.total.toLocaleString()}</td>
                   <td>
-                    <span
-                      className={`${styles.status} ${
-                        styles[order.status.toLowerCase()] || ""
-                      }`}
-                    >
+                    <span className={`${styles.status} ${styles[order.status.toLowerCase()] || ""}`}>
                       {order.status}
                     </span>
                   </td>
@@ -267,41 +215,21 @@ export default function DashboardPage() {
         </table>
       </div>
 
-      {/* Drawer for Order Details */}
+      {/* Drawer */}
       {selectedOrder && (
-        <div
-          className={styles.drawerOverlay}
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div
-            className={styles.drawer}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className={styles.drawerOverlay} onClick={() => setSelectedOrder(null)}>
+          <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
             <h2>Order Details</h2>
-            <p>
-              <strong>Customer:</strong> {selectedOrder.customer}
-            </p>
-            <p>
-              <strong>Email:</strong> {selectedOrder.email}
-            </p>
-            <p>
-              <strong>Phone:</strong> {selectedOrder.phone}
-            </p>
-            <p>
-              <strong>Date:</strong> {selectedOrder.createdAt}
-            </p>
-            <p>
-              <strong>Address:</strong> {selectedOrder.address}
-            </p>
-            <p>
-              <strong>Total:</strong> LKR{" "}
-              {selectedOrder.total.toLocaleString()}
-            </p>
+            <p><strong>Customer:</strong> {selectedOrder.customer}</p>
+            <p><strong>Email:</strong> {selectedOrder.email}</p>
+            <p><strong>Phone:</strong> {selectedOrder.phone}</p>
+            <p><strong>Date:</strong> {selectedOrder.createdAt}</p>
+            <p><strong>Address:</strong> {selectedOrder.address}</p>
+            <p><strong>Total:</strong> LKR {selectedOrder.total.toLocaleString()}</p>
 
             <div className={styles.itemList}>
               <h3>Items</h3>
-              {Array.isArray(selectedOrder.items) &&
-              selectedOrder.items.length > 0 ? (
+              {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                 selectedOrder.items.map((item: any, i: number) => (
                   <p key={i}>
                     {item.name || "Unnamed"} × {item.quantity || 1} — LKR{" "}
@@ -313,10 +241,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <button
-              className={styles.closeBtn}
-              onClick={() => setSelectedOrder(null)}
-            >
+            <button className={styles.closeBtn} onClick={() => setSelectedOrder(null)}>
               Close
             </button>
           </div>
