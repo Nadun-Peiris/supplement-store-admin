@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic"; // ✅ Dynamic import for SSR safety
 import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Player } from "@lottiefiles/react-lottie-player";
 import styles from "./login.module.css";
+
+// ✅ Dynamically load Player (client-only)
+const Player = dynamic(
+  () => import("@lottiefiles/react-lottie-player").then((mod) => mod.Player),
+  { ssr: false }
+);
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,7 +29,7 @@ export default function LoginPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-      setTimeout(() => setShowForm(true), 300); // show form 300ms after fade
+      setTimeout(() => setShowForm(true), 300); // Show form after fade
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
@@ -68,19 +74,19 @@ export default function LoginPage() {
 
   return (
     <main className={styles.main}>
-      {/* Loading Animation */}
+      {/* 🌀 Loading Animation */}
       {loading && (
         <div className={`${styles.loaderWrapper} ${!loading ? styles.fadeOut : ""}`}>
           <Player
             autoplay
             loop
-            src="/animations/loading.json"
+            src="/animations/loading.json"  // ✅ make sure path is /public/animations/loading.json
             className={styles.lottiePlayer}
           />
         </div>
       )}
 
-      {/* Login Form */}
+      {/* 🔐 Login Form */}
       {showForm && (
         <form
           onSubmit={handleLogin}
