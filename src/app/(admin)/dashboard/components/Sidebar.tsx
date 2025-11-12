@@ -63,12 +63,6 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
           ))}
         </nav>
       </div>
-
-      <div className={styles.footer}>
-        <button className={styles.logout}>
-          <LogOut size={18} /> Log out
-        </button>
-      </div>
     </aside>
   );
 }
