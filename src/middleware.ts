@@ -1,20 +1,63 @@
+export const runtime = "nodejs"; // ✅ Enables Firebase Admin in middleware
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifyIdToken } from "@/utils/verifyToken";
 
-export function middleware(req: NextRequest) {
+// ✅ Define all protected admin routes
+const protectedRoutes = [
+  "/dashboard",
+  "/reports",
+  "/products",
+  "/admins",
+  "/users",
+  "/settings",
+];
+
+export async function middleware(req: NextRequest) {
+  const url = req.nextUrl.clone();
   const token = req.cookies.get("firebaseToken")?.value;
 
-  // 🔒 If trying to access /dashboard or its children without token → redirect to login
-  if (req.nextUrl.pathname.startsWith("/dashboard") && !token) {
-    const loginUrl = new URL("/login", req.url);
-    return NextResponse.redirect(loginUrl);
+  // Allow free access to /login and site root
+  if (url.pathname === "/" || url.pathname.startsWith("/login")) {
+    return NextResponse.next();
   }
 
-  // ✅ Allow everything else
+  // 🔐 Protect admin routes
+  if (protectedRoutes.some((path) => url.pathname.startsWith(path))) {
+    if (!token) {
+      // No cookie → redirect to login
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+
+    try {
+      const decoded = await verifyIdToken(token);
+      if (decoded) {
+        return NextResponse.next(); // ✅ Authorized
+      } else {
+        url.pathname = "/login";
+        return NextResponse.redirect(url);
+      }
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // All other public routes
   return NextResponse.next();
 }
 
-// Apply only to these routes
+// ✅ Apply to all admin-related routes
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/reports/:path*",
+    "/products/:path*",
+    "/admins/:path*",
+    "/users/:path*",
+    "/settings/:path*",
+  ],
 };
