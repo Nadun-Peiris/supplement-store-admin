@@ -1,0 +1,238 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+/* ───────────── Header ───────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.addBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.addBtn:hover {
+  background: #1d4ed8;
+}
+
+/* ───────────── Table Wrapper ───────────── */
+.tableWrapper {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  border: 1px solid #f1f5f9;
+}
+
+/* ───────────── Table ───────────── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #000;
+}
+
+.table th {
+  background: #f8fafc;
+  color: #111827;
+  font-weight: 600;
+}
+
+.table tr:hover {
+  background: #f9fafb;
+}
+
+/* ───────────── Buttons ───────────── */
+.deleteBtn {
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.deleteBtn:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+/* ───────────── Loading ───────────── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ───────────── Modal ───────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999; /* FIXED */
+}
+
+.modal {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.modal h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 0.5rem;
+}
+
+.modal label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  margin-top: 0.5rem;
+}
+
+/* ───────────── SELECT FIX (Dropdown not visible issue) ───────────── */
+.modal select {
+  background: #fff !important;
+  color: #000 !important;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  width: 100%;
+  position: relative;
+  z-index: 2000; /* CRITICAL FIX */
+}
+
+.modal option {
+  background: #fff !important;
+  color: #000 !important;
+  padding: 0.5rem;
+}
+
+/* ───────────── Inputs ───────────── */
+.modal select,
+.modal input {
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  color: #000;
+  background: #fff;
+}
+
+.modal input:focus,
+.modal select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
+}
+
+/* ───────────── Modal Buttons ───────────── */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.cancelBtn {
+  background: #e2e8f0;
+  color: #000;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.saveBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.saveBtn:hover {
+  background: #1d4ed8;
+}
+
+/* ───────────── Responsive ───────────── */
+@media (max-width: 768px) {
+  .table {
+    min-width: 700px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .addBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .tableWrapper {
+    box-shadow: none;
+    margin: 0 -0.5rem;
+  }
+
+  .modal {
+    border-radius: 0.75rem;
+  }
+}

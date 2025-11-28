@@ -13,6 +13,7 @@ const navItems = [
   { name: "Users", href: "/dashboard/users" },
   { name: "Reports", href: "/dashboard/reports" },
   { name: "Profile", href: "/dashboard/profile" },
+  { name: "Web Management", href: "/dashboard/webmanagement" },
   { name: "Settings", href: "/dashboard/settings" },
 ];
 
