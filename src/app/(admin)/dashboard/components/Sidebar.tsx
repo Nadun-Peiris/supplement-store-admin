@@ -9,6 +9,8 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard" },
   { name: "Orders", href: "/dashboard/orders" },
   { name: "Products", href: "/dashboard/products" },
+  { name: "Categories", href: "/dashboard/categories" },
+  { name: "Brands", href: "/dashboard/brands" },
   { name: "Admins", href: "/dashboard/admins" },
   { name: "Users", href: "/dashboard/users" },
   { name: "Reports", href: "/dashboard/reports" },

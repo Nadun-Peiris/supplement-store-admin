@@ -12,7 +12,8 @@ export async function PUT(req: Request, { params }: ParamsPromise) {
     const { id } = await params;
     const body = await req.json();
     const rawIndex = Number(body?.index);
-    if (!Number.isFinite(rawIndex)) {
+
+    if (!Number.isInteger(rawIndex)) {
       return NextResponse.json(
         { error: "Invalid index value" },
         { status: 400 }
@@ -20,6 +21,7 @@ export async function PUT(req: Request, { params }: ParamsPromise) {
     }
 
     const target = await FeaturedCategory.findById(id);
+
     if (!target) {
       return NextResponse.json(
         { error: "Featured category not found" },
@@ -28,27 +30,27 @@ export async function PUT(req: Request, { params }: ParamsPromise) {
     }
 
     const total = await FeaturedCategory.countDocuments();
-    const desiredIndex = Math.max(
-      1,
-      Math.min(total, Math.round(rawIndex))
-    );
+    const maxIndex = total - 1;
+
+    // 🔥 Index now starts from 0
+    const desiredIndex = Math.max(0, Math.min(maxIndex, rawIndex));
 
     if (target.index === desiredIndex) {
       return NextResponse.json({ success: true });
     }
 
-    if (typeof target.index === "number") {
-      if (desiredIndex > target.index) {
-        await FeaturedCategory.updateMany(
-          { index: { $gt: target.index, $lte: desiredIndex } },
-          { $inc: { index: -1 } }
-        );
-      } else {
-        await FeaturedCategory.updateMany(
-          { index: { $lt: target.index, $gte: desiredIndex } },
-          { $inc: { index: 1 } }
-        );
-      }
+    const oldIndex = target.index ?? 0;
+
+    if (desiredIndex > oldIndex) {
+      await FeaturedCategory.updateMany(
+        { index: { $gt: oldIndex, $lte: desiredIndex } },
+        { $inc: { index: -1 } }
+      );
+    } else {
+      await FeaturedCategory.updateMany(
+        { index: { $gte: desiredIndex, $lt: oldIndex } },
+        { $inc: { index: 1 } }
+      );
     }
 
     target.index = desiredIndex;
@@ -66,14 +68,17 @@ export async function DELETE(req: Request, { params }: ParamsPromise) {
     await connectDB();
 
     const { id } = await params;
+
     const maybeObjectId = mongoose.Types.ObjectId.isValid(id)
       ? new mongoose.Types.ObjectId(id)
       : null;
 
     let deleted = null;
 
+    // 🔥 Keep your flexible delete logic
     if (maybeObjectId) {
       deleted = await FeaturedCategory.findByIdAndDelete(maybeObjectId);
+
       if (!deleted) {
         deleted = await FeaturedCategory.findOneAndDelete({
           categoryId: maybeObjectId,
@@ -84,6 +89,7 @@ export async function DELETE(req: Request, { params }: ParamsPromise) {
         categoryId: id,
       });
     }
+
     if (!deleted) {
       return NextResponse.json(
         { error: "Featured category not found" },
@@ -91,6 +97,7 @@ export async function DELETE(req: Request, { params }: ParamsPromise) {
       );
     }
 
+    // 🔥 Normalize indexes (no gaps)
     if (typeof deleted.index === "number") {
       await FeaturedCategory.updateMany(
         { index: { $gt: deleted.index } },

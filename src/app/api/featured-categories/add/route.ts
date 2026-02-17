@@ -1,47 +1,52 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import FeaturedCategory from "@/models/FeaturedCategory";
-import Category from "@/models/Category";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
 
     const { categoryId } = await req.json();
-    if (!categoryId)
-      return NextResponse.json({ error: "Missing categoryId" }, { status: 400 });
 
-    // Fetch full category for validation
-    const category = await Category.findById(categoryId);
-    if (!category)
-      return NextResponse.json({ error: "Category not found" }, { status: 404 });
-
-    // Limit total featured entries
-    const MAX_FEATURED = 8;
-    const total = await FeaturedCategory.countDocuments();
-    if (total >= MAX_FEATURED) {
+    if (!categoryId) {
       return NextResponse.json(
-        { error: `Maximum of ${MAX_FEATURED} featured categories reached` },
+        { error: "Category ID is required" },
         { status: 400 }
       );
     }
 
-    // Check duplicate
-    const exists = await FeaturedCategory.findOne({ categoryId });
-    if (exists)
-      return NextResponse.json({ error: "Already added" }, { status: 400 });
+    // 🔎 Prevent duplicates
+    const existing = await FeaturedCategory.findOne({ categoryId });
 
-    // Get last index
-    const last = await FeaturedCategory.findOne().sort({ index: -1 });
+    if (existing) {
+      return NextResponse.json(
+        { error: "Category already featured" },
+        { status: 400 }
+      );
+    }
 
-    const entry = await FeaturedCategory.create({
+    // 🔎 Enforce max 8
+    const count = await FeaturedCategory.countDocuments();
+
+    if (count >= 8) {
+      return NextResponse.json(
+        { error: "Maximum of 8 featured categories allowed" },
+        { status: 400 }
+      );
+    }
+
+    // 🧠 Assign next index
+    const newFeatured = await FeaturedCategory.create({
       categoryId,
-      index: last ? last.index + 1 : 1,
+      index: count,
     });
 
-    return NextResponse.json({ success: true, entry });
-  } catch (err) {
-    console.error("ADD FEATURED ERROR", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(newFeatured, { status: 201 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to add featured category" },
+      { status: 500 }
+    );
   }
 }

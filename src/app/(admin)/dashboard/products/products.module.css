@@ -1,276 +1,272 @@
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem 1.25rem 2rem;
+.dashboardContainer {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: inherit;
 }
 
-/* ───────────── Header ───────────── */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 2rem;
 }
 
-.heading {
+.headerLeft h1 {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #000;
+  margin-bottom: 1rem;
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  background: #f3f4f6;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  gap: 0.5rem;
+  width: 300px;
+}
+
+.searchWrapper input {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
 }
 
 .addBtn {
-  background: #2563eb;
+  background: #000;
   color: #fff;
   border: none;
   padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: background 0.2s ease;
+  transition: opacity 0.2s;
 }
 
 .addBtn:hover {
-  background: #1d4ed8;
+  opacity: 0.8;
 }
 
-/* ───────────── Table Wrapper ───────────── */
-.tableWrapper {
-  background: #ffffff;
-  border-radius: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow-x: auto;
-  border: 1px solid #f1f5f9;
+/* Table Styles */
+.tableContainer {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-/* ───────────── Table ───────────── */
-.table {
+.productTable {
   width: 100%;
   border-collapse: collapse;
-  min-width: 850px;
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
   text-align: left;
-  font-size: 0.9rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #000;
 }
 
-.table th {
-  background: #f8fafc;
+.productTable th {
+  background: #f9fafb;
+  padding: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.productTable td {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.tableThumb {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f3f4f6;
+}
+
+.pName {
+  font-weight: 500;
   color: #111827;
+}
+
+.statusActive {
+  background: #ecfdf5;
+  color: #059669;
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
-.table tr:hover {
+.statusInactive {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions button {
+  padding: 0.4rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.actions .editBtn:hover { background: #f3f4f6; }
+.actions .deleteBtn:hover { background: #fee2e2; color: #dc2626; }
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #fff;
+  width: 95%;
+  max-width: 550px;
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 1rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inputRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.inputGroup label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.inputGroup input, 
+.inputGroup select, 
+.inputGroupFull textarea {
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.inputGroupFull {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.imageUploadRow {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.imageBox {
+  flex: 1;
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 100px;
+  border: 2px dashed #e5e7eb;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
   background: #f9fafb;
 }
 
-/* 🔸 Low Stock Warning */
-.lowStock {
-  color: #b91c1c;
-  font-weight: 600;
-  background: #fee2e2;
-  border-radius: 4px;
-  padding: 4px 8px;
-}
-
-/* ───────────── Product Image ───────────── */
-.productImage {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-}
-
-/* ───────────── Buttons ───────────── */
-.editBtn,
-.deleteBtn {
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-
-.editBtn {
-  background: #e0f2fe;
-  color: #075985;
-  margin-right: 0.5rem;
-  font-weight: 500;
-}
-
-.editBtn:hover {
-  background: #bae6fd;
-  transform: translateY(-1px);
-}
-
-.deleteBtn {
-  background: #fee2e2;
-  color: #b91c1c;
-  font-weight: 500;
-}
-
-.deleteBtn:hover {
-  background: #fecaca;
-  transform: translateY(-1px);
-}
-
-/* ───────────── Loading ───────────── */
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 60vh;
-  color: #000;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.link {
-  color: #2563eb;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-.noCoa {
-  color: #6b7280;
-  font-style: italic;
-}
-
-/* ───────────── Modal ───────────── */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 50;
-}
-
-.modal {
-  background: #fff;
-  padding: 1.5rem;
-  border-radius: 10px;
+.imagePlaceholder img {
   width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  object-fit: cover;
 }
 
-.modal h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #000;
-  margin-bottom: 0.5rem;
-}
-
-.modal input {
-  border: 1px solid #cbd5e1;
-  padding: 0.6rem 0.8rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  outline: none;
-  color: #000;
-}
-
-.modal input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb33;
-}
-
-.modal label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #334155;
-  margin-top: 0.5rem;
-}
-
-.modalActions {
+.formActions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1rem;
 }
 
-.cancelBtn {
-  background: #e2e8f0;
-  color: #000;
+.btnGhost {
+  background: #f3f4f6;
   border: none;
   padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-.saveBtn {
-  background: #2563eb;
+.btnPrimary {
+  background: #000;
   color: #fff;
   border: none;
   padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-.saveBtn:hover {
-  background: #1d4ed8;
-}
-
-/* Delete confirmation */
-.deleteConfirmBtn {
-  background: #dc2626;
-  color: #fff;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.deleteConfirmBtn:hover {
-  background: #b91c1c;
-}
-
-/* ───────────── Responsive ───────────── */
-@media (max-width: 768px) {
-  .table {
-    min-width: 700px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .addBtn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .section {
-    padding: 1.25rem 1rem 1.5rem;
-  }
-
-  .tableWrapper {
-    box-shadow: none;
-    margin: 0 -0.5rem;
-  }
-
-  .modal {
-    border-radius: 0.75rem;
-  }
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

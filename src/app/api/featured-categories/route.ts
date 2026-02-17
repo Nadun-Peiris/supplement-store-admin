@@ -48,6 +48,7 @@ export async function GET() {
 
     const items = (await FeaturedCategory.find()
       .sort({ index: 1 })
+      .limit(8)
       .populate("categoryId")
       .lean()) as PopulatedFeaturedCategory[];
 
