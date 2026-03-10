@@ -1,13 +1,18 @@
 import * as admin from "firebase-admin";
+import type { DecodedIdToken } from "firebase-admin/auth";
 
 let app: admin.app.App;
 
-// ✅ Initialize Firebase Admin once
+/* ---------------------------------------------------------
+   Initialize Firebase Admin (Once Only)
+--------------------------------------------------------- */
 if (!admin.apps.length) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!privateKey) {
-    throw new Error("❌ Missing FIREBASE_PRIVATE_KEY in environment variables.");
+    throw new Error(
+      "❌ Missing FIREBASE_PRIVATE_KEY in environment variables."
+    );
   }
 
   app = admin.initializeApp({
@@ -21,21 +26,18 @@ if (!admin.apps.length) {
   app = admin.app();
 }
 
-/**
- * ✅ Verifies a Firebase ID token safely in middleware/server.
- * @param token - The Firebase JWT from cookies.
- * @returns Decoded token payload or null if invalid.
- */
-export const verifyToken = async (token: string) => {
-  if (!token) return null;
-
-  try {
-    const decoded = await admin.auth().verifyIdToken(token);
-    return decoded;
-  } catch (error) {
-    console.error("Token verification failed:", error);
-    return null;
+/* ---------------------------------------------------------
+   Verify Firebase Token
+   Returns DecodedIdToken OR throws error
+--------------------------------------------------------- */
+export const verifyToken = async (
+  token: string
+): Promise<DecodedIdToken> => {
+  if (!token) {
+    throw new Error("No token provided");
   }
+
+  return await admin.auth().verifyIdToken(token);
 };
 
 export default app;

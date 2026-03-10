@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import styles from "./Categories.module.css";
+import { useEffect, useState, useRef, useMemo } from "react";
+import Link from "next/link";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
+import { ImagePlus, Edit2, Trash2, Plus, Search, X } from "lucide-react";
 
 type Category = {
   _id: string;
@@ -13,6 +14,10 @@ type Category = {
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Modal & Form State
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -34,6 +39,16 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Filter Categories
+  const filteredCategories = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return categories;
+    return categories.filter((cat) =>
+      cat.name.toLowerCase().includes(query) ||
+      cat.slug.toLowerCase().includes(query)
+    );
+  }, [categories, searchQuery]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -62,13 +77,15 @@ export default function CategoriesPage() {
       const url = editingId ? `/api/categories/${editingId}` : "/api/categories";
       const method = editingId ? "PUT" : "POST";
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      resetForm();
+      if (!res.ok) throw new Error("Failed to save");
+
+      closeModal();
       fetchCategories();
     } catch (error) {
       alert("Operation failed");
@@ -83,8 +100,13 @@ export default function CategoriesPage() {
       await fetch(`/api/categories/${id}`, { method: "DELETE" });
       fetchCategories();
     } catch (error) {
-      alert("Failed to delete");
+      alert("Failed to delete category");
     }
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setIsModalOpen(true);
   };
 
   const handleEdit = (cat: Category) => {
@@ -92,6 +114,7 @@ export default function CategoriesPage() {
     setName(cat.name ?? "");
     setPreview(cat.image);
     setFile(null);
+    setIsModalOpen(true);
   };
 
   const resetForm = () => {
@@ -102,91 +125,209 @@ export default function CategoriesPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    resetForm();
+  };
+
   return (
-    <div className={styles.dashboardContainer}>
-      <header className={styles.header}>
-        <div>
-          <h1>Categories</h1>
-          <p>Manage your product taxonomy and visual assets</p>
+    <div className="flex flex-col gap-6">
+      {/* Page Header */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+            <p className="text-sm text-gray-500 sm:hidden">Manage your product taxonomy.</p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE]"
+            />
+          </div>
         </div>
-        <div className={styles.stats}>
-          <span>Total: <strong>{categories.length}</strong></span>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/webmanagement/featured-categories"
+            className="inline-flex items-center justify-center rounded-lg border border-[#01C7FE] px-4 py-2 text-sm font-semibold text-[#01C7FE] shadow-sm transition-colors hover:bg-[#01C7FE]/10"
+          >
+            Featured Categories
+          </Link>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
+          >
+            <Plus size={18} />
+            Add Category
+          </button>
         </div>
       </header>
 
-      <main className={styles.mainLayout}>
-        {/* LEFT COLUMN: FORM */}
-        <aside className={styles.formSidebar}>
-          <form className={styles.card} onSubmit={handleSubmit}>
-            <h3>{editingId ? "Edit Category" : "Create New Category"}</h3>
-            
-            <div className={styles.inputGroup}>
-              <label>Category Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Electronics"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+      {/* Data Table */}
+      <main className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Cover Image
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Category Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Slug Path
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {filteredCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-sm text-gray-500">
+                    No categories found.
+                  </td>
+                </tr>
+              ) : (
+                filteredCategories.map((cat) => (
+                  <tr key={cat._id} className="transition-colors hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="h-12 w-20 overflow-hidden rounded-md border border-gray-200 bg-gray-100">
+                        <img
+                          src={cat.image || "/placeholder.png"}
+                          alt={cat.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-gray-900">
+                      {cat.name}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <code className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        /{cat.slug}
+                      </code>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(cat)}
+                          className="text-gray-400 transition-colors hover:text-[#01C7FE]"
+                          title="Edit Category"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(cat._id)}
+                          className="text-gray-400 transition-colors hover:text-red-600"
+                          title="Delete Category"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
 
-            <div className={styles.inputGroup}>
-              <label>Cover Image</label>
-              <div 
-                className={styles.uploadArea} 
-                onClick={() => fileInputRef.current?.click()}
+      {/* Modal Overlay for Add/Edit Form */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm sm:p-6">
+          <div className="flex w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingId ? "Edit Category" : "New Category"}
+              </h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
               >
-                {preview ? (
-                  <img src={preview} alt="Preview" className={styles.previewImg} />
-                ) : (
-                  <div className={styles.uploadPlaceholder}>
-                    <span>Click to upload image</span>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
-              </div>
+                <X size={20} />
+              </button>
             </div>
 
-            <div className={styles.actions}>
-              <button type="submit" className={styles.btnPrimary} disabled={loading}>
-                {loading ? "Processing..." : editingId ? "Save Changes" : "Add Category"}
-              </button>
-              {editingId && (
-                <button type="button" className={styles.btnGhost} onClick={resetForm}>
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit} className="flex flex-col">
+              <div className="flex flex-col gap-5 p-6">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Category Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Electronics"
+                    required
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Cover Image</label>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="group relative flex h-40 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-[#01C7FE] hover:bg-white"
+                  >
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#01C7FE]">
+                        <ImagePlus size={32} />
+                        <span className="text-sm font-medium">Click to upload image</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                >
                   Cancel
                 </button>
-              )}
-            </div>
-          </form>
-        </aside>
-
-        {/* RIGHT COLUMN: GRID */}
-        <section className={styles.contentArea}>
-          <div className={styles.grid}>
-            {categories.map((cat) => (
-              <div key={cat._id} className={styles.categoryCard}>
-                <div className={styles.imageWrapper}>
-                  <img src={cat.image} alt={cat.name} />
-                  <div className={styles.overlay}>
-                     <button onClick={() => handleEdit(cat)} className={styles.iconBtn}>Edit</button>
-                     <button onClick={() => handleDelete(cat._id)} className={`${styles.iconBtn} ${styles.danger}`}>Delete</button>
-                  </div>
-                </div>
-                <div className={styles.cardInfo}>
-                  <h4>{cat.name}</h4>
-                  <code>/{cat.slug}</code>
-                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? "Processing..." : editingId ? "Update Category" : "Create Category"}
+                </button>
               </div>
-            ))}
+            </form>
           </div>
-        </section>
-      </main>
+        </div>
+      )}
     </div>
   );
 }

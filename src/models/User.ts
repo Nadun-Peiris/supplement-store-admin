@@ -1,0 +1,145 @@
+// src/models/User.ts
+
+import mongoose, {
+  Schema,
+  Document,
+  models,
+  type Model,
+  type Types,
+} from "mongoose";
+
+/* ---------------------------------------------------------
+   TypeScript Interface
+--------------------------------------------------------- */
+export interface IUser extends Document {
+  _id: Types.ObjectId;
+  firebaseId: string;
+
+  fullName: string;
+  email: string;
+  phone: string;
+  age: number;
+  gender: string;
+
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  goal?: "weight-loss" | "muscle-gain" | "maintain" | "transform";
+  activity?: "sedentary" | "light" | "moderate" | "heavy";
+  conditions?: string;
+  diet?: "normal" | "vegetarian" | "vegan" | "keto";
+  sleepHours?: number;
+  waterIntake?: number;
+
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  postalCode: string;
+  country: string;
+
+  subscription: {
+    id: string | null;
+    active: boolean;
+    nextBillingDate: Date | null;
+    lemonCustomerId: string | null;
+    status: string | null;
+    cancelledAt: Date | null;
+  };
+
+  // 🔐 NEW FIELDS
+  role: "customer" | "admin" | "superadmin";
+  isBlocked: boolean;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/* ---------------------------------------------------------
+   Mongoose Schema
+--------------------------------------------------------- */
+const UserSchema = new Schema<IUser>(
+  {
+    firebaseId: { type: String, required: true, unique: true },
+
+    // Step 1
+    fullName: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true, unique: true },
+    age: { type: Number, required: true },
+    gender: { type: String, required: true },
+
+    // Step 2 - Health
+    height: Number,
+    weight: Number,
+    bmi: Number,
+    goal: {
+      type: String,
+      enum: ["weight-loss", "muscle-gain", "maintain", "transform"],
+    },
+    activity: {
+      type: String,
+      enum: ["sedentary", "light", "moderate", "heavy"],
+    },
+    conditions: String,
+    diet: {
+      type: String,
+      enum: ["normal", "vegetarian", "vegan", "keto"],
+    },
+    sleepHours: Number,
+    waterIntake: Number,
+
+    // Step 3 - Billing
+    addressLine1: { type: String, required: true },
+    addressLine2: { type: String },
+    city: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+
+    subscription: {
+      id: { type: String, default: null },
+      active: { type: Boolean, default: false },
+      nextBillingDate: { type: Date, default: null },
+      lemonCustomerId: { type: String, default: null },
+      status: { type: String, default: null },
+      cancelledAt: { type: Date, default: null },
+    },
+
+    // 🔐 ROLE SYSTEM
+    role: {
+      type: String,
+      enum: ["customer", "admin", "superadmin"],
+      default: "customer",
+    },
+
+    // 🔐 BLOCK SYSTEM
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+
+    createdAt: { type: Date, default: Date.now },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+/* ---------------------------------------------------------
+   Indexes (Performance Optimization)
+--------------------------------------------------------- */
+UserSchema.index(
+  { role: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { role: "superadmin" },
+  }
+);
+
+/* ---------------------------------------------------------
+   Export Model
+--------------------------------------------------------- */
+const User: Model<IUser> =
+  (models.User as Model<IUser>) ||
+  mongoose.model<IUser>("User", UserSchema);
+
+export default User;

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { FirebaseError } from "firebase/app";
 import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import styles from "./login.module.css";
@@ -43,10 +45,26 @@ export default function LoginPage() {
 
     try {
       // Firebase Auth login
-      await signInWithEmailAndPassword(auth, email, password);
+      const credentials = await signInWithEmailAndPassword(auth, email, password);
 
       // ✅ Get Firebase ID token
-      const token = await auth.currentUser?.getIdToken();
+      const token = await credentials.user.getIdToken();
+
+      // ✅ Validate role before allowing dashboard access
+      const roleCheckResponse = await fetch("/api/auth/validate-role", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!roleCheckResponse.ok) {
+        await signOut(auth);
+        document.cookie =
+          "firebaseToken=; path=/; max-age=0; Secure; SameSite=Strict";
+        setError("❌ Not allowed. Only admin or superadmin can log in.");
+        return;
+      }
 
       // ✅ Store token in secure cookie for middleware auth
       if (token) {
@@ -55,9 +73,26 @@ export default function LoginPage() {
 
       // Redirect to dashboard
       window.location.href = "/dashboard";
-    } catch (err: any) {
-      console.error(err);
-      setError("❌ Invalid email or password. Please try again.");
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        if (err.code === "auth/invalid-credential") {
+          setError("❌ Invalid email or password.");
+          return;
+        }
+
+        if (err.code === "auth/too-many-requests") {
+          setError("❌ Too many attempts. Please try again later.");
+          return;
+        }
+
+        if (err.code === "auth/user-disabled") {
+          setError("❌ This account is disabled.");
+          return;
+        }
+      }
+
+      console.error("Login error:", err);
+      setError("❌ Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }

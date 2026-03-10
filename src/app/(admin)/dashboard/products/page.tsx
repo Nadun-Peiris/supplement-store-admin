@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import styles from "./products.module.css";
 import { Edit2, Plus, Search, Trash2, X } from "lucide-react";
 
 type Product = {
@@ -68,7 +67,9 @@ export default function ProductsPage() {
       const res = await fetch("/api/products");
       const data = (await res.json()) as { products?: Product[] };
       setProducts(data.products || []);
-    } catch (error) { console.error("Failed to fetch products", error); }
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    }
   };
 
   const fetchCategories = async () => {
@@ -76,7 +77,9 @@ export default function ProductsPage() {
       const res = await fetch("/api/categories");
       const data = (await res.json()) as { categories?: Category[] };
       setCategories(data.categories || []);
-    } catch (error) { console.error("Failed to fetch categories", error); }
+    } catch (error) {
+      console.error("Failed to fetch categories", error);
+    }
   };
 
   const fetchBrands = async () => {
@@ -84,7 +87,9 @@ export default function ProductsPage() {
       const res = await fetch("/api/brands");
       const data = (await res.json()) as { brands?: Brand[] };
       setBrands(data.brands || []);
-    } catch (error) { console.error("Failed to fetch brands", error); }
+    } catch (error) {
+      console.error("Failed to fetch brands", error);
+    }
   };
 
   useEffect(() => {
@@ -96,10 +101,11 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return products;
-    return products.filter((product) => 
-      product.name.toLowerCase().includes(query) ||
-      product.brandName?.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query)
+    return products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(query) ||
+        product.brandName?.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query)
     );
   }, [products, searchQuery]);
 
@@ -160,7 +166,9 @@ export default function ProductsPage() {
     try {
       await fetch(`/api/products/${id}`, { method: "DELETE" });
       fetchProducts();
-    } catch (error) { alert("Failed to delete product"); }
+    } catch (error) {
+      alert("Failed to delete product");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -174,7 +182,8 @@ export default function ProductsPage() {
       let imageUrl = form.image;
       let hoverImageUrl = form.hoverImage;
       if (mainImageFile) imageUrl = await uploadToCloudinary(mainImageFile);
-      if (hoverImageFile) hoverImageUrl = await uploadToCloudinary(hoverImageFile);
+      if (hoverImageFile)
+        hoverImageUrl = await uploadToCloudinary(hoverImageFile);
 
       const payload = {
         ...form,
@@ -204,153 +213,295 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className={styles.dashboardContainer}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1>Products</h1>
-          <div className={styles.searchWrapper}>
-            <Search size={18} />
+    <div className="flex flex-col gap-6">
+      {/* Page Header */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <div className="relative w-full sm:w-72">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
             <input
               type="text"
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE]"
             />
           </div>
         </div>
-
-        <button className={styles.addBtn} onClick={openCreateModal}>
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
+        >
           <Plus size={18} />
           Add Product
         </button>
       </header>
 
-      <main className={styles.tableContainer}>
-        <table className={styles.productTable}>
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Brand</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((product) => (
-              <tr key={product._id}>
-                <td>
-                  <img src={product.image || "/placeholder.png"} className={styles.tableThumb} />
-                </td>
-                <td className={styles.pName}>{product.name}</td>
-                <td>{product.category}</td>
-                <td>{product.brandName || "-"}</td>
-                <td>LKR {product.price.toLocaleString()}</td>
-                <td>{product.stock}</td>
-                <td>
-                  <span className={product.isActive ? styles.statusActive : styles.statusInactive}>
-                    {product.isActive ? "Active" : "Hidden"}
-                  </span>
-                </td>
-                <td className={styles.actions}>
-                  <button type="button" onClick={() => handleEdit(product)} className={styles.editBtn}>
-                    <Edit2 size={16} />
-                  </button>
-                  <button type="button" onClick={() => handleDelete(product._id)} className={styles.deleteBtn}>
-                    <Trash2 size={16} />
-                  </button>
-                </td>
+      {/* Data Table */}
+      <main className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Image
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Brand
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {filteredProducts.map((product) => (
+                <tr key={product._id} className="transition-colors hover:bg-gray-50">
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <img
+                      src={product.image || "/placeholder.png"}
+                      alt={product.name}
+                      className="h-10 w-10 rounded-md border border-gray-200 object-cover"
+                    />
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    {product.name}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {product.category}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {product.brandName || "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                    LKR {product.price.toLocaleString()}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                    {product.stock}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                        product.isActive
+                          ? "bg-green-50 text-green-700 ring-green-600/20"
+                          : "bg-gray-50 text-gray-600 ring-gray-500/20"
+                      }`}
+                    >
+                      {product.isActive ? "Active" : "Hidden"}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(product)}
+                        className="text-gray-400 transition-colors hover:text-[#01C7FE]"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(product._id)}
+                        className="text-gray-400 transition-colors hover:text-red-500"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredProducts.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-sm text-gray-500">
+                    No products found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </main>
 
+      {/* Modal Overlay */}
       {isModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeader}>
-              <h3>{editingId ? "Edit Product" : "New Product"}</h3>
-              <button type="button" onClick={closeModal} className={styles.closeBtn}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm sm:p-6">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingId ? "Edit Product" : "New Product"}
+              </h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 p-1"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className={styles.formGrid}>
-              <div className={styles.inputGroup}>
-                <label>Product Name</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div className={styles.inputRow}>
-                <div className={styles.inputGroup}>
-                  <label>Category</label>
-                  <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value }))} required>
-                    <option value="">Select category</option>
-                    {categories.map((c) => <option key={c._id} value={c.name}>{c.name}</option>)}
-                  </select>
+            {/* Modal Body (Scrollable) */}
+            <form onSubmit={handleSubmit} className="flex flex-col overflow-y-auto">
+              <div className="flex flex-col gap-5 p-6">
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Product Name</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                  />
                 </div>
-                <div className={styles.inputGroup}>
-                  <label>Brand</label>
-                  <select value={form.brandName} onChange={(e) => setForm(p => ({ ...p, brandName: e.target.value }))}>
-                    <option value="">No brand</option>
-                    {brands.map((b) => <option key={b._id} value={b.name}>{b.name}</option>)}
-                  </select>
-                </div>
-              </div>
 
-              <div className={styles.inputRow}>
-                <div className={styles.inputGroup}>
-                  <label>Price (LKR)</label>
-                  <input type="number" value={form.price} onChange={(e) => setForm(p => ({ ...p, price: e.target.value }))} required />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Stock</label>
-                  <input type="number" value={form.stock} onChange={(e) => setForm(p => ({ ...p, stock: e.target.value }))} />
-                </div>
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Visibility Status</label>
-                <select value={form.isActive ? "active" : "hidden"} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.value === "active" }))}>
-                  <option value="active">Active (Visible)</option>
-                  <option value="hidden">Hidden</option>
-                </select>
-              </div>
-
-              <div className={styles.imageUploadRow}>
-                <div className={styles.imageBox}>
-                  <label>Main Image</label>
-                  <input type="file" ref={mainFileInputRef} onChange={handleMainImageChange} hidden />
-                  <div className={styles.imagePlaceholder} onClick={() => mainFileInputRef.current?.click()}>
-                    {form.image ? <img src={form.image} /> : <Plus />}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Category</label>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                      required
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    >
+                      <option value="">Select category</option>
+                      {categories.map((c) => (
+                        <option key={c._id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Brand</label>
+                    <select
+                      value={form.brandName}
+                      onChange={(e) => setForm((p) => ({ ...p, brandName: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    >
+                      <option value="">No brand</option>
+                      {brands.map((b) => (
+                        <option key={b._id} value={b.name}>{b.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-                <div className={styles.imageBox}>
-                  <label>Hover Image</label>
-                  <input type="file" ref={hoverFileInputRef} onChange={handleHoverImageChange} hidden />
-                  <div className={styles.imagePlaceholder} onClick={() => hoverFileInputRef.current?.click()}>
-                    {form.hoverImage ? <img src={form.hoverImage} /> : <Plus />}
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Price (LKR)</label>
+                    <input
+                      type="number"
+                      value={form.price}
+                      onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+                      required
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    />
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Stock</label>
+                    <input
+                      type="number"
+                      value={form.stock}
+                      onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Visibility Status</label>
+                  <select
+                    value={form.isActive ? "active" : "hidden"}
+                    onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.value === "active" }))}
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                  >
+                    <option value="active">Active (Visible)</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+
+                {/* Image Upload Dropzones */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Main Image</label>
+                    <input type="file" ref={mainFileInputRef} onChange={handleMainImageChange} hidden accept="image/*" />
+                    <div
+                      onClick={() => mainFileInputRef.current?.click()}
+                      className="group relative flex h-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-[#01C7FE] hover:bg-white"
+                    >
+                      {form.image ? (
+                        <img src={form.image} alt="Main" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-gray-500 group-hover:text-[#01C7FE]">
+                          <Plus size={24} />
+                          <span className="text-xs font-medium">Upload Image</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Hover Image (Optional)</label>
+                    <input type="file" ref={hoverFileInputRef} onChange={handleHoverImageChange} hidden accept="image/*" />
+                    <div
+                      onClick={() => hoverFileInputRef.current?.click()}
+                      className="group relative flex h-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-[#01C7FE] hover:bg-white"
+                    >
+                      {form.hoverImage ? (
+                        <img src={form.hoverImage} alt="Hover" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-gray-500 group-hover:text-[#01C7FE]">
+                          <Plus size={24} />
+                          <span className="text-xs font-medium">Upload Image</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Description</label>
+                  <textarea
+                    rows={3}
+                    value={form.description}
+                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                  />
                 </div>
               </div>
 
-              <div className={styles.inputGroupFull}>
-                <label>Description</label>
-                <textarea rows={3} value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
-              </div>
-
-              <div className={styles.formActions}>
-                <button type="button" onClick={closeModal} className={styles.btnGhost}>Cancel</button>
-                <button type="submit" className={styles.btnPrimary} disabled={loading}>
+              {/* Modal Footer Actions */}
+              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6] disabled:cursor-not-allowed disabled:opacity-50"
+                >
                   {loading ? "Processing..." : editingId ? "Update Product" : "Create Product"}
                 </button>
               </div>

@@ -5,6 +5,32 @@
   padding: 1.5rem 1.25rem 2rem;
 }
 
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tabLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.tabLink:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
 /* ───────────── Header ───────────── */
 .header {
   display: flex;
