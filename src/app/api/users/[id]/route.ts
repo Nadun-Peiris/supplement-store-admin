@@ -17,7 +17,30 @@ const isNonEmptyString = (value: unknown): value is string =>
 
 type LeanUserDoc = {
   _id: { toString: () => string };
-  [key: string]: unknown;
+  firebaseId?: unknown;
+  fullName?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  age?: unknown;
+  gender?: unknown;
+  height?: unknown;
+  weight?: unknown;
+  bmi?: unknown;
+  goal?: unknown;
+  activity?: unknown;
+  conditions?: unknown;
+  diet?: unknown;
+  sleepHours?: unknown;
+  waterIntake?: unknown;
+  addressLine1?: unknown;
+  addressLine2?: unknown;
+  city?: unknown;
+  postalCode?: unknown;
+  country?: unknown;
+  role?: unknown;
+  isBlocked?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 };
 
 const toPublicUser = (u: LeanUserDoc) => ({
