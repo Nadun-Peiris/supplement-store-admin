@@ -1,7 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, X, CheckCircle2, AlertCircle, Info, ShoppingBag, MapPin, Phone, Mail, User as UserIcon, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Mail,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Search,
+  ShoppingBag,
+  User as UserIcon,
+  X,
+} from "lucide-react";
+import { DateRangeValue, SingleCalendarRangePicker } from "@/app/(admin)/dashboard/components/SingleCalendarRangePicker";
 
 interface OrderItem {
   name: string;
@@ -44,8 +57,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue>({ start: "", end: "" });
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [orderTypeTab, setOrderTypeTab] = useState<OrderTypeTab>("all");
   const [loading, setLoading] = useState(true);
@@ -110,13 +122,13 @@ export default function OrdersPage() {
       list = list.filter((o) => (o.fulfillmentStatus || "unfulfilled") === statusTab);
     }
 
-    if (startDate) {
-      const start = new Date(`${startDate}T00:00:00`);
+    if (dateRange.start) {
+      const start = new Date(`${dateRange.start}T00:00:00`);
       list = list.filter((o) => new Date(o.createdAt) >= start);
     }
 
-    if (endDate) {
-      const end = new Date(`${endDate}T23:59:59.999`);
+    if (dateRange.end) {
+      const end = new Date(`${dateRange.end}T23:59:59.999`);
       list = list.filter((o) => new Date(o.createdAt) <= end);
     }
 
@@ -133,7 +145,7 @@ export default function OrdersPage() {
     }
 
     setFilteredOrders(list);
-  }, [search, statusTab, orderTypeTab, orders, startDate, endDate]);
+  }, [dateRange.end, dateRange.start, orderTypeTab, orders, search, statusTab]);
 
   /* ---------------- UPDATE STATUS PIPELINE ---------------- */
   const getNextStep = (currentStatus: string): { next: FulfillmentStatus; label: string } | null => {
@@ -330,34 +342,7 @@ export default function OrdersPage() {
               <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
-            <div className="flex w-full gap-2 sm:w-auto">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE] sm:w-40"
-                aria-label="Filter from date"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE] sm:w-40"
-                aria-label="Filter to date"
-              />
-              {(startDate || endDate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+            <SingleCalendarRangePicker value={dateRange} onChange={setDateRange} />
             <div className="relative w-full sm:w-80">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input

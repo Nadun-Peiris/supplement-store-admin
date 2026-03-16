@@ -10,11 +10,30 @@ export async function PATCH(
     await connectDB();
 
     const body = await req.json();
-    const { status } = body;
+    const { status, adminViewed } = body;
 
-    if (status !== "cancelled") {
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (typeof adminViewed === "boolean") {
+      updates.adminViewed = adminViewed;
+    }
+
+    if (typeof status === "string") {
+      if (status !== "cancelled") {
+        return NextResponse.json(
+          { error: "Only 'cancelled' status is allowed for subscription status updates" },
+          { status: 400 }
+        );
+      }
+
+      updates.status = "cancelled";
+    }
+
+    if (Object.keys(updates).length === 1) {
       return NextResponse.json(
-        { error: "Only 'cancelled' status is allowed for this endpoint" },
+        { error: "No valid updates provided" },
         { status: 400 }
       );
     }
@@ -23,10 +42,7 @@ export async function PATCH(
 
     const subscription = await Subscription.findByIdAndUpdate(
       id,
-      {
-        status: "cancelled",
-        updatedAt: new Date(),
-      },
+      updates,
       { new: true, runValidators: true }
     );
 

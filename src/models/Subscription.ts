@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import { Schema, model, models } from "mongoose";
 
 const SubscriptionSchema = new Schema(
   {
@@ -40,8 +40,18 @@ const SubscriptionSchema = new Schema(
       default: "active",
     },
 
+    adminViewed: {
+      type: Boolean,
+      default: false,
+    },
+
     nextBillingDate: {
       type: Date,
+    },
+
+    lastPaymentDate: {
+      type: Date,
+      default: Date.now,
     },
 
     recurrence: {

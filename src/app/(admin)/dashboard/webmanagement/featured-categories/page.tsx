@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GripVertical, Trash2, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { GripVertical, Trash2, CheckCircle2, AlertCircle, Info, ArrowLeft } from "lucide-react";
 
 import {
   DndContext,
@@ -246,6 +247,13 @@ export default function FeaturedCategoriesPage() {
       {/* Page Header */}
       <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-1">
+          <Link
+            href="/dashboard/categories"
+            className="mb-2 inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm transition-colors hover:border-[#01C7FE] hover:text-[#01C7FE]"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900">Featured Categories</h1>
           <p className="text-sm text-gray-500">Drag to reorder how categories appear on your homepage</p>
         </div>
