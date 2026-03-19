@@ -13,6 +13,12 @@ export default function WebsiteManagementPage() {
         >
           Featured Categories
         </Link>
+        <Link
+          href="/dashboard/webmanagement/featured-brands"
+          className={styles.tabLink}
+        >
+          Featured Brands
+        </Link>
       </div>
     </section>
   );

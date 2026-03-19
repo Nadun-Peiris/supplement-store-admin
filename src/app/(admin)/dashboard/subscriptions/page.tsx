@@ -32,7 +32,7 @@ interface Subscription {
   recurrence?: string;
   items: SubscriptionItem[];
   totalInstallmentsPaid: number;
-  orderId: OrderRef;
+  orderId?: OrderRef | null;
 }
 
 type StatusTab = "active" | "cancelled" | "all";

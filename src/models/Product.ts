@@ -20,35 +20,90 @@ const ProductSchema = new Schema(
       trim: true,
     },
 
-    // Must stay string to avoid breaking client
+    // ✅ Category
     category: { type: String, required: true },
     categorySlug: { type: String },
 
+    // ✅ Brand
     brandName: { type: String, default: "" },
     brandSlug: { type: String },
 
+    // ✅ Pricing
     price: { type: Number, required: true },
+
+    // 🔥 (Future ready for Sri Lanka)
+    discountPrice: { type: Number },
+    currency: { type: String, default: "LKR" },
+
+    // ✅ Images
     image: { type: String, required: true },
     hoverImage: { type: String },
+    gallery: [{ type: String }], // multiple images
 
+    // ✅ Legacy (DO NOT REMOVE — avoids breaking frontend)
     description: { type: String },
 
-    isActive: { type: Boolean, default: true },
+    // 🔥 NEW — Structured product content
+    details: {
+      overview: { type: String },
 
+      ingredients: [{ type: String }],
+      benefits: [{ type: String }],
+      howToUse: [{ type: String }],
+      warnings: [{ type: String }],
+      additionalInfo: [{ type: String }],
+
+      // 🔥 Supplement Facts (IMPORTANT)
+      servingInfo: {
+        servingSize: { type: String }, // e.g. "1 scoop (30g)"
+        servingsPerContainer: { type: Number },
+
+        nutrients: [
+          {
+            name: { type: String },      // Protein
+            amount: { type: String },    // 24g
+            dailyValue: { type: String }, // 48%
+            indentLevel: { type: Number, default: 0 },
+            emphasized: { type: Boolean, default: false },
+          }
+        ],
+        title: { type: String, default: "Nutrition Facts" },
+        amountPerServingLabel: {
+          type: String,
+          default: "Amount Per Serving",
+        },
+        dailyValueLabel: { type: String, default: "% Daily Value" },
+        footnote: { type: String },
+        ingredientsText: { type: String },
+        containsText: { type: String },
+        noticeText: { type: String },
+      }
+    },
+
+    // 🔥 Authenticity (BIG for your project)
+    coa: {
+      certificateUrl: { type: String },
+      verified: { type: Boolean, default: false },
+    },
+
+    // ✅ Status & Inventory
+    isActive: { type: Boolean, default: true },
     stock: { type: Number, default: 0 },
   },
   {
     collection: "products",
+    minimize: false,
     timestamps: true,
   }
 );
 
-// Performance indexes (same as client)
+// 🔥 Indexes (important for filtering & performance)
 ProductSchema.index({ categorySlug: 1, brandSlug: 1 });
 ProductSchema.index({ price: 1 });
 ProductSchema.index({ createdAt: -1 });
+ProductSchema.index({ "details.servingInfo.nutrients.name": 1 });
 
-// Auto slug + derived fields
+// 🔥 Auto-generate slugs
 ProductSchema.pre("save", function () {
   if (this.slug) {
     this.slug = toSlug(this.slug);
@@ -69,7 +124,10 @@ ProductSchema.pre("save", function () {
 
 export type ProductDocument = InferSchemaType<typeof ProductSchema>;
 
-const Product =
-  models.Product || mongoose.model("Product", ProductSchema);
+if (process.env.NODE_ENV !== "production" && models.Product) {
+  delete models.Product;
+}
+
+const Product = mongoose.model("Product", ProductSchema);
 
 export default Product;

@@ -4,6 +4,7 @@ export interface IOrder extends Document {
   user?: mongoose.Types.ObjectId | null;
   guestUser?: mongoose.Types.ObjectId | null;
   orderType: "normal" | "subscription";
+  shippingMethod: "standard_shipping";
 
   items: {
     product: mongoose.Types.ObjectId;
@@ -17,7 +18,7 @@ export interface IOrder extends Document {
   shippingCost: number;
   total: number;
 
-  paymentProvider: "payhere" | "lemon";
+  paymentProvider: "payhere";
 
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
 
@@ -29,7 +30,6 @@ export interface IOrder extends Document {
     | "shipped"
     | "completed";
 
-  courier?: string | null;
   trackingNumber?: string | null;
 
   shippedAt?: Date | null;
@@ -72,6 +72,13 @@ const OrderSchema = new Schema<IOrder>(
       required: true,
     },
 
+    shippingMethod: {
+      type: String,
+      enum: ["standard_shipping"],
+      default: "standard_shipping",
+      required: true,
+    },
+
     items: [
       {
         product: {
@@ -92,7 +99,7 @@ const OrderSchema = new Schema<IOrder>(
 
     paymentProvider: {
       type: String,
-      enum: ["payhere", "lemon"],
+      enum: ["payhere"],
       required: true,
     },
 
@@ -111,11 +118,6 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["unfulfilled", "fulfilled", "shipped", "completed"],
       default: "unfulfilled",
-    },
-
-    courier: {
-      type: String,
-      default: null,
     },
 
     trackingNumber: {

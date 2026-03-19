@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import Link from "next/link";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import { ImagePlus, Edit2, Trash2, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckSquare, ImagePlus, Edit2, Trash2, Plus, Search, X } from "lucide-react";
 
 type Brand = {
   _id: string;
@@ -11,9 +12,13 @@ type Brand = {
   image?: string;
 };
 
+const ITEMS_PER_PAGE = 20;
+
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +27,7 @@ export default function BrandsPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +35,11 @@ export default function BrandsPage() {
     try {
       const res = await fetch("/api/brands");
       const data = await res.json();
-      setBrands(data.brands || []);
+      const nextBrands = data.brands || [];
+      setBrands(nextBrands);
+      setSelectedBrandIds((prev) =>
+        prev.filter((id) => nextBrands.some((brand: Brand) => brand._id === id))
+      );
     } catch (error) {
       console.error("Failed to fetch brands", error);
     }
@@ -48,6 +58,30 @@ export default function BrandsPage() {
       brand.slug.toLowerCase().includes(query)
     );
   }, [brands, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredBrands.length / ITEMS_PER_PAGE));
+
+  const paginatedBrands = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredBrands.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredBrands]);
+
+  const currentPageBrandIds = useMemo(
+    () => paginatedBrands.map((brand) => brand._id),
+    [paginatedBrands]
+  );
+
+  const allVisibleSelected =
+    currentPageBrandIds.length > 0 &&
+    currentPageBrandIds.every((id) => selectedBrandIds.includes(id));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -84,25 +118,71 @@ export default function BrandsPage() {
 
       closeModal();
       fetchBrands();
-    } catch (error) {
+    } catch {
       alert("Operation failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return;
+  const deleteBrands = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setDeleteLoading(true);
 
     try {
-      await fetch(`/api/brands/${id}`, {
-        method: "DELETE",
-      });
+      const responses = await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/brands/${id}`, {
+            method: "DELETE",
+          })
+        )
+      );
 
-      fetchBrands();
-    } catch (error) {
+      if (responses.some((res) => !res.ok)) {
+        throw new Error("Failed to delete some brands");
+      }
+
+      setSelectedBrandIds((prev) => prev.filter((id) => !ids.includes(id)));
+      await fetchBrands();
+    } catch {
       alert("Failed to delete brand");
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure? This action cannot be undone.")) return;
+    await deleteBrands([id]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedBrandIds.length === 0) return;
+    if (
+      !confirm(
+        `Delete ${selectedBrandIds.length} selected brand${
+          selectedBrandIds.length === 1 ? "" : "s"
+        }? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    await deleteBrands(selectedBrandIds);
+  };
+
+  const toggleBrandSelection = (id: string) => {
+    setSelectedBrandIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllBrands = () => {
+    setSelectedBrandIds((prev) =>
+      allVisibleSelected
+        ? prev.filter((id) => !currentPageBrandIds.includes(id))
+        : Array.from(new Set([...prev, ...currentPageBrandIds]))
+    );
   };
 
   const openCreateModal = () => {
@@ -154,21 +234,64 @@ export default function BrandsPage() {
             />
           </div>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
-        >
-          <Plus size={18} />
-          Add Brand
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSelectAllBrands}
+            disabled={currentPageBrandIds.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckSquare size={16} />
+            {allVisibleSelected ? "Clear Selection" : "Select All"}
+          </button>
+          <Link
+            href="/dashboard/webmanagement/featured-brands"
+            className="inline-flex items-center justify-center rounded-lg border border-[#01C7FE] px-4 py-2 text-sm font-semibold text-[#01C7FE] shadow-sm transition-colors hover:bg-[#01C7FE]/10"
+          >
+            Featured Brands
+          </Link>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
+          >
+            <Plus size={18} />
+            Add Brand
+          </button>
+        </div>
       </header>
 
       {/* Data Table */}
       <main className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500">
+            {selectedBrandIds.length > 0
+              ? `${selectedBrandIds.length} selected`
+              : `${filteredBrands.length} brand${filteredBrands.length === 1 ? "" : "s"} found`}
+          </p>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={selectedBrandIds.length === 0 || deleteLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 size={16} />
+            {deleteLoading ? "Deleting..." : "Delete Selected"}
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={handleSelectAllBrands}
+                    disabled={currentPageBrandIds.length === 0}
+                    className="h-4 w-4 rounded border-gray-300 text-[#01C7FE] focus:ring-[#01C7FE]"
+                    aria-label="Select all brands"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Brand Logo
                 </th>
@@ -184,15 +307,24 @@ export default function BrandsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredBrands.length === 0 ? (
+              {paginatedBrands.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-sm text-gray-500">
+                  <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
                     No brands found.
                   </td>
                 </tr>
               ) : (
-                filteredBrands.map((brand) => (
+                paginatedBrands.map((brand) => (
                   <tr key={brand._id} className="transition-colors hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedBrandIds.includes(brand._id)}
+                        onChange={() => toggleBrandSelection(brand._id)}
+                        className="h-4 w-4 rounded border-gray-300 text-[#01C7FE] focus:ring-[#01C7FE]"
+                        aria-label={`Select ${brand.name}`}
+                      />
+                    </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       {/* Logo Container: using flex & object-contain so logos fit nicely */}
                       <div className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-50 p-1">
@@ -237,6 +369,37 @@ export default function BrandsPage() {
             </tbody>
           </table>
         </div>
+        {filteredBrands.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-500">
+              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+              {Math.min(currentPage * ITEMS_PER_PAGE, filteredBrands.length)} of {filteredBrands.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ArrowLeft size={16} />
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal Overlay for Add/Edit Form */}

@@ -8,9 +8,10 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-const GOAL_OPTIONS = ["weight-loss", "muscle-gain", "maintain", "transform"] as const;
-const ACTIVITY_OPTIONS = ["sedentary", "light", "moderate", "heavy"] as const;
-const DIET_OPTIONS = ["normal", "vegetarian", "vegan", "keto"] as const;
+const GENDER_OPTIONS = ["Male", "Female", "Other"] as const;
+const GOAL_OPTIONS = ["Weight Loss", "Muscle Gain", "Maintenance", "Body Transformation"] as const;
+const ACTIVITY_OPTIONS = ["Sedentary", "Light", "Moderate", "Active", "Very Active"] as const;
+const DIET_OPTIONS = ["Standard", "Vegetarian", "Vegan", "Keto", "Paleo"] as const;
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
@@ -37,6 +38,13 @@ type LeanUserDoc = {
   city?: unknown;
   postalCode?: unknown;
   country?: unknown;
+  subscription?: {
+    subscriptionId?: unknown;
+    active?: unknown;
+    nextBillingDate?: unknown;
+    status?: unknown;
+    lastPaymentDate?: unknown;
+  };
   role?: unknown;
   isBlocked?: unknown;
   createdAt?: unknown;
@@ -65,6 +73,13 @@ const toPublicUser = (u: LeanUserDoc) => ({
   city: u.city,
   postalCode: u.postalCode,
   country: u.country,
+  subscription: {
+    subscriptionId: u.subscription?.subscriptionId ?? null,
+    active: u.subscription?.active ?? false,
+    nextBillingDate: u.subscription?.nextBillingDate ?? null,
+    status: u.subscription?.status ?? null,
+    lastPaymentDate: u.subscription?.lastPaymentDate ?? null,
+  },
   role: u.role,
   isBlocked: u.isBlocked,
   createdAt: u.createdAt,
@@ -160,6 +175,21 @@ export async function PUT(req: Request, { params }: Params) {
       setData[field] = body[field].trim();
     };
 
+    const assignRequiredEnum = (field: string, allowed: readonly string[]) => {
+      if (body[field] === undefined) return;
+      if (typeof body[field] !== "string") {
+        throw new Error(`${field} must be a string`);
+      }
+      const value = body[field].trim();
+      if (!value) {
+        throw new Error(`${field} is required`);
+      }
+      if (!allowed.includes(value)) {
+        throw new Error(`Invalid ${field} value`);
+      }
+      setData[field] = value;
+    };
+
     const assignOptionalString = (field: string) => {
       if (body[field] === undefined) return;
       if (typeof body[field] !== "string") {
@@ -216,7 +246,7 @@ export async function PUT(req: Request, { params }: Params) {
     assignRequiredString("fullName");
     assignRequiredString("email");
     assignRequiredString("phone");
-    assignRequiredString("gender");
+    assignRequiredEnum("gender", GENDER_OPTIONS);
     assignRequiredString("addressLine1");
     assignRequiredString("city");
     assignRequiredString("postalCode");

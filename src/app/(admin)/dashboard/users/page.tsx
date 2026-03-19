@@ -3,15 +3,36 @@
 import { useEffect, useState } from "react";
 import { Search, Plus, Edit2, Trash2, X, CheckCircle2, AlertCircle, Info } from "lucide-react";
 
+type UserRole = "customer" | "admin" | "superadmin";
+type UserGender = "Male" | "Female" | "Other";
+type UserGoal = "Weight Loss" | "Muscle Gain" | "Maintenance" | "Body Transformation";
+type UserActivity = "Sedentary" | "Light" | "Moderate" | "Active" | "Very Active";
+type UserDiet = "Standard" | "Vegetarian" | "Vegan" | "Keto" | "Paleo";
+
+type UserSubscription = {
+  subscriptionId: string | null;
+  active: boolean;
+  nextBillingDate: string | null;
+  status: "active" | "cancelled" | "completed" | null;
+  lastPaymentDate: string | null;
+};
+
 type User = {
   _id: string;
   fullName: string;
   email: string;
   phone: string;
-  role: "customer" | "admin" | "superadmin";
+  role: UserRole;
   isBlocked: boolean;
-  subscriptionActive: boolean;
+  subscription: UserSubscription;
   createdAt: string;
+};
+
+type DetailedUserResponse = Omit<UserFormData, "gender" | "goal" | "activity" | "diet"> & {
+  gender?: UserGender | null;
+  goal?: UserGoal | null;
+  activity?: UserActivity | null;
+  diet?: UserDiet | null;
 };
 
 type UserFormData = {
@@ -19,14 +40,14 @@ type UserFormData = {
   email: string;
   phone: string;
   age: string;
-  gender: string;
+  gender: "" | UserGender;
   height: string;
   weight: string;
   bmi: string;
-  goal: string;
-  activity: string;
+  goal: "" | UserGoal;
+  activity: "" | UserActivity;
   conditions: string;
-  diet: string;
+  diet: "" | UserDiet;
   sleepHours: string;
   waterIntake: string;
   addressLine1: string;
@@ -49,6 +70,22 @@ type ConfirmDialog = {
   isDanger: boolean;
   action: () => Promise<void>;
 } | null;
+
+const GENDER_OPTIONS: UserGender[] = ["Male", "Female", "Other"];
+const GOAL_OPTIONS: UserGoal[] = [
+  "Weight Loss",
+  "Muscle Gain",
+  "Maintenance",
+  "Body Transformation",
+];
+const ACTIVITY_OPTIONS: UserActivity[] = [
+  "Sedentary",
+  "Light",
+  "Moderate",
+  "Active",
+  "Very Active",
+];
+const DIET_OPTIONS: UserDiet[] = ["Standard", "Vegetarian", "Vegan", "Keto", "Paleo"];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -128,6 +165,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------------- SEARCH ---------------- */
@@ -160,6 +198,8 @@ export default function UsersPage() {
   const handleEditClick = async (user: User) => {
     if (!canManageUser(user)) return;
     const toInput = (value: unknown) => (value === null || value === undefined ? "" : String(value));
+    const toEnumInput = <T extends string>(value: unknown, allowed: readonly T[]): T | "" =>
+      typeof value === "string" && allowed.includes(value as T) ? (value as T) : "";
 
     try {
       setIsEditLoading(true);
@@ -172,21 +212,21 @@ export default function UsersPage() {
         throw new Error(data.error || "Failed to load user details");
       }
 
-      const detailedUser = data.user;
+      const detailedUser = data.user as Partial<DetailedUserResponse>;
       setEditingUser(user);
       setFormData({
         fullName: toInput(detailedUser.fullName),
         email: toInput(detailedUser.email),
         phone: toInput(detailedUser.phone),
         age: toInput(detailedUser.age),
-        gender: toInput(detailedUser.gender),
+        gender: toEnumInput(detailedUser.gender, GENDER_OPTIONS),
         height: toInput(detailedUser.height),
         weight: toInput(detailedUser.weight),
         bmi: toInput(detailedUser.bmi),
-        goal: toInput(detailedUser.goal),
-        activity: toInput(detailedUser.activity),
+        goal: toEnumInput(detailedUser.goal, GOAL_OPTIONS),
+        activity: toEnumInput(detailedUser.activity, ACTIVITY_OPTIONS),
         conditions: toInput(detailedUser.conditions),
-        diet: toInput(detailedUser.diet),
+        diet: toEnumInput(detailedUser.diet, DIET_OPTIONS),
         sleepHours: toInput(detailedUser.sleepHours),
         waterIntake: toInput(detailedUser.waterIntake),
         addressLine1: toInput(detailedUser.addressLine1),
@@ -415,9 +455,9 @@ export default function UsersPage() {
                       {user.role}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      {user.subscriptionActive ? (
+                      {user.subscription?.active ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                          Active
+                          {user.subscription.status === "active" ? "Active" : "Subscribed"}
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
@@ -568,12 +608,20 @@ export default function UsersPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Gender</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value as UserFormData["gender"] })
+                    }
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
-                  />
+                  >
+                    <option value="">Select gender</option>
+                    {GENDER_OPTIONS.map((gender) => (
+                      <option key={gender} value={gender}>
+                        {gender}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Height</label>
@@ -606,42 +654,51 @@ export default function UsersPage() {
                   <label className="text-sm font-medium text-gray-700">Goal</label>
                   <select
                     value={formData.goal}
-                    onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, goal: e.target.value as UserFormData["goal"] })
+                    }
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
                   >
                     <option value="">Select your goal</option>
-                    <option value="weight-loss">Lose Weight</option>
-                    <option value="muscle-gain">Gain Muscle</option>
-                    <option value="maintain">Maintain Health</option>
-                    <option value="transform">Body Transformation</option>
+                    {GOAL_OPTIONS.map((goal) => (
+                      <option key={goal} value={goal}>
+                        {goal}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Activity</label>
                   <select
                     value={formData.activity}
-                    onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, activity: e.target.value as UserFormData["activity"] })
+                    }
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
                   >
                     <option value="">Select activity</option>
-                    <option value="sedentary">Sedentary</option>
-                    <option value="light">Light Activity</option>
-                    <option value="moderate">Moderately Active</option>
-                    <option value="heavy">Very Active</option>
+                    {ACTIVITY_OPTIONS.map((activity) => (
+                      <option key={activity} value={activity}>
+                        {activity}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Diet</label>
                   <select
                     value={formData.diet}
-                    onChange={(e) => setFormData({ ...formData, diet: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, diet: e.target.value as UserFormData["diet"] })
+                    }
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
                   >
                     <option value="">Select diet</option>
-                    <option value="normal">Normal</option>
-                    <option value="vegetarian">Vegetarian</option>
-                    <option value="vegan">Vegan</option>
-                    <option value="keto">Keto</option>
+                    {DIET_OPTIONS.map((diet) => (
+                      <option key={diet} value={diet}>
+                        {diet}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">

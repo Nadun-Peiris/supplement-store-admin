@@ -20,7 +20,9 @@ export async function GET(req: Request) {
     ]);
 
     const subscriptionOrderIds = new Set(
-      subscriptionRefs.map((sub) => String(sub.orderId))
+      subscriptionRefs
+        .filter((sub) => sub.orderId)
+        .map((sub) => String(sub.orderId))
     );
 
     const ordersWithType = orders.map((order) => {

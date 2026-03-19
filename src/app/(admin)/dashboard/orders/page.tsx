@@ -37,6 +37,7 @@ interface Order {
   items: OrderItem[];
   total: number;
   orderType?: "normal" | "subscription";
+  shippingMethod?: string;
   paymentStatus: string;
   fulfillmentStatus: string;
   trackingNumber?: string | null;
@@ -259,6 +260,14 @@ export default function OrdersPage() {
     }
   };
 
+  const formatShippingMethod = (shippingMethod?: string) => {
+    if (!shippingMethod) return "Not specified";
+    return shippingMethod
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  };
+
   const tabs: StatusTab[] = ["unfulfilled", "fulfilled", "shipped", "completed", "all"];
 
   const orderTypeCounts = useMemo(
@@ -447,6 +456,7 @@ export default function OrdersPage() {
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Total</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Shipping</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
               </tr>
@@ -454,7 +464,7 @@ export default function OrdersPage() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="py-12 text-center text-sm text-gray-500">
                     No orders found matching your criteria.
                   </td>
                 </tr>
@@ -494,6 +504,9 @@ export default function OrdersPage() {
                         <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium capitalize text-gray-700">
                           {order.orderType || "normal"}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                        {formatShippingMethod(order.shippingMethod)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
                         <span
@@ -568,6 +581,25 @@ export default function OrdersPage() {
                 >
                   {selectedOrder.fulfillmentStatus || "unfulfilled"}
                 </span>
+              </div>
+
+              <div className="mb-6 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Order Type
+                  </p>
+                  <p className="mt-2 text-sm font-semibold capitalize text-gray-900">
+                    {selectedOrder.orderType || "normal"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Shipping Method
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                    {formatShippingMethod(selectedOrder.shippingMethod)}
+                  </p>
+                </div>
               </div>
 
               {/* Customer Info Card */}

@@ -11,7 +11,7 @@ const SubscriptionSchema = new Schema(
     orderId: {
       type: Schema.Types.ObjectId,
       ref: "Order",
-      required: true,
+      default: null,
     },
 
     subscriptionId: {

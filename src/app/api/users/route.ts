@@ -46,7 +46,13 @@ export async function GET(req: Request) {
         phone: u.phone,
         role: u.role ?? "customer",
         isBlocked: u.isBlocked,
-        subscriptionActive: u.subscription?.active || false,
+        subscription: {
+          subscriptionId: u.subscription?.subscriptionId ?? null,
+          active: u.subscription?.active ?? false,
+          nextBillingDate: u.subscription?.nextBillingDate ?? null,
+          status: u.subscription?.status ?? null,
+          lastPaymentDate: u.subscription?.lastPaymentDate ?? null,
+        },
         createdAt: u.createdAt,
       }))
       .sort((a, b) => {

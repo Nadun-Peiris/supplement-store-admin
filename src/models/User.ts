@@ -1,5 +1,3 @@
-// src/models/User.ts
-
 import mongoose, {
   Schema,
   Document,
@@ -15,38 +13,41 @@ export interface IUser extends Document {
   _id: Types.ObjectId;
   firebaseId: string;
 
+  // Step 1 - Basic Info
   fullName: string;
   email: string;
   phone: string;
   age: number;
-  gender: string;
+  gender: "Male" | "Female" | "Other";
 
+  // Step 2 - Health & Lifestyle
   height?: number;
   weight?: number;
   bmi?: number;
-  goal?: "weight-loss" | "muscle-gain" | "maintain" | "transform";
-  activity?: "sedentary" | "light" | "moderate" | "heavy";
+  goal?: "Weight Loss" | "Muscle Gain" | "Maintenance" | "Body Transformation";
+  activity?: "Sedentary" | "Light" | "Moderate" | "Active" | "Very Active";
   conditions?: string;
-  diet?: "normal" | "vegetarian" | "vegan" | "keto";
+  diet?: "Standard" | "Vegetarian" | "Vegan" | "Keto" | "Paleo";
   sleepHours?: number;
   waterIntake?: number;
 
+  // Step 3 - Billing & Address
   addressLine1: string;
   addressLine2?: string;
   city: string;
   postalCode: string;
   country: string;
 
+  // Subscription (Synced with PayHere logic)
   subscription: {
-    id: string | null;
+    subscriptionId: string | null; // PayHere Subscription ID
     active: boolean;
     nextBillingDate: Date | null;
-    lemonCustomerId: string | null;
-    status: string | null;
-    cancelledAt: Date | null;
+    status: "active" | "cancelled" | "completed" | null;
+    lastPaymentDate: Date | null;
   };
 
-  // 🔐 NEW FIELDS
+  // 🔐 Role & Permissions
   role: "customer" | "admin" | "superadmin";
   isBlocked: boolean;
 
@@ -61,47 +62,55 @@ const UserSchema = new Schema<IUser>(
   {
     firebaseId: { type: String, required: true, unique: true },
 
-    // Step 1
+    // Step 1: Basic
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true, unique: true },
     age: { type: Number, required: true },
-    gender: { type: String, required: true },
+    gender: { 
+      type: String, 
+      required: true, 
+      enum: ["Male", "Female", "Other"] 
+    },
 
-    // Step 2 - Health
+    // Step 2: Health
     height: Number,
     weight: Number,
     bmi: Number,
     goal: {
       type: String,
-      enum: ["weight-loss", "muscle-gain", "maintain", "transform"],
+      enum: ["Weight Loss", "Muscle Gain", "Maintenance", "Body Transformation"],
     },
     activity: {
       type: String,
-      enum: ["sedentary", "light", "moderate", "heavy"],
+      enum: ["Sedentary", "Light", "Moderate", "Active", "Very Active"],
     },
-    conditions: String,
+    conditions: { type: String, default: "" },
     diet: {
       type: String,
-      enum: ["normal", "vegetarian", "vegan", "keto"],
+      enum: ["Standard", "Vegetarian", "Vegan", "Keto", "Paleo"],
+      default: "Standard"
     },
     sleepHours: Number,
     waterIntake: Number,
 
-    // Step 3 - Billing
+    // Step 3: Billing
     addressLine1: { type: String, required: true },
     addressLine2: { type: String },
     city: { type: String, required: true },
     postalCode: { type: String, required: true },
-    country: { type: String, required: true },
+    country: { type: String, required: true, default: "Sri Lanka" },
 
     subscription: {
-      id: { type: String, default: null },
+      subscriptionId: { type: String, default: null },
       active: { type: Boolean, default: false },
       nextBillingDate: { type: Date, default: null },
-      lemonCustomerId: { type: String, default: null },
-      status: { type: String, default: null },
-      cancelledAt: { type: Date, default: null },
+      status: { 
+        type: String, 
+        enum: ["active", "cancelled", "completed", null], 
+        default: null 
+      },
+      lastPaymentDate: { type: Date, default: null },
     },
 
     // 🔐 ROLE SYSTEM
@@ -116,22 +125,23 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
-
-    createdAt: { type: Date, default: Date.now },
   },
   {
-    timestamps: true,
+    timestamps: true, // Automatically handles createdAt and updatedAt
   }
 );
 
 /* ---------------------------------------------------------
-   Indexes (Performance Optimization)
+   Indexes
 --------------------------------------------------------- */
+UserSchema.index({ email: 1 });
+UserSchema.index({ firebaseId: 1 });
+
+// Ensure only one superadmin exists if needed, or just index roles
 UserSchema.index(
   { role: 1 },
   {
-    unique: true,
-    partialFilterExpression: { role: "superadmin" },
+    unique: false, // Changed from true to allow multiple admins/customers
   }
 );
 
