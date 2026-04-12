@@ -255,6 +255,8 @@ const ITEMS_PER_PAGE = 20;
 
 // 🔥 The Tailwind fix for the TypeScript error
 const inputClass = "w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]";
+const formatPrice = (currency: string | undefined, amount: number) =>
+  `${currency || "LKR"} ${amount.toLocaleString()}`;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -705,7 +707,26 @@ export default function ProductsPage() {
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{product.category}</td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{product.brandName || "-"}</td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{product.currency || "LKR"} {product.price.toLocaleString()}</td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <div className="flex flex-col">
+                      <span
+                        className={`text-sm ${
+                          typeof product.discountPrice === "number" &&
+                          product.discountPrice < product.price
+                            ? "text-gray-500 line-through"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        {formatPrice(product.currency, product.price)}
+                      </span>
+                      {typeof product.discountPrice === "number" &&
+                        product.discountPrice < product.price && (
+                          <span className="text-sm font-semibold text-emerald-600">
+                            {formatPrice(product.currency, product.discountPrice)}
+                          </span>
+                        )}
+                    </div>
+                  </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{product.stock}</td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${product.isActive ? "bg-green-50 text-green-700 ring-green-600/20" : "bg-gray-50 text-gray-600 ring-gray-500/20"}`}>
