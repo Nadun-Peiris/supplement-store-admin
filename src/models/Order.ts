@@ -3,8 +3,10 @@ import mongoose, { Schema, Document, models, model } from "mongoose";
 export interface IOrder extends Document {
   user?: mongoose.Types.ObjectId | null;
   guestUser?: mongoose.Types.ObjectId | null;
+  subscription?: mongoose.Types.ObjectId | null;
   orderType: "normal" | "subscription";
   shippingMethod: "standard_shipping";
+  renewalNumber?: number | null;
 
   items: {
     product: mongoose.Types.ObjectId;
@@ -65,6 +67,12 @@ const OrderSchema = new Schema<IOrder>(
       default: null,
     },
 
+    subscription: {
+      type: Schema.Types.ObjectId,
+      ref: "Subscription",
+      default: null,
+    },
+
     orderType: {
       type: String,
       enum: ["normal", "subscription"],
@@ -77,6 +85,11 @@ const OrderSchema = new Schema<IOrder>(
       enum: ["standard_shipping"],
       default: "standard_shipping",
       required: true,
+    },
+
+    renewalNumber: {
+      type: Number,
+      default: null,
     },
 
     items: [

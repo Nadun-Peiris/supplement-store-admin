@@ -5,6 +5,12 @@ import Subscription from "@/models/Subscription";
 import User from "@/models/User";
 import { sendEmail } from "@/lib/mail/nodemailer";
 
+type OrderEmailItem = {
+  name: string;
+  price: number;
+  quantity: number;
+};
+
 // ✅ GET ORDERS (UNCHANGED)
 export async function GET(req: Request) {
   try {
@@ -29,7 +35,10 @@ export async function GET(req: Request) {
     );
 
     const ordersWithType = orders.map((order) => {
-      const isSubscriptionOrder = subscriptionOrderIds.has(String(order._id));
+      const isSubscriptionOrder =
+        Boolean(order.subscription) ||
+        subscriptionOrderIds.has(String(order._id));
+
       return {
         ...order,
         orderType: isSubscriptionOrder ? "subscription" : "normal",
@@ -70,7 +79,10 @@ export async function PATCH(req: Request) {
     }
 
     // Prepare update payload
-    const updatePayload: any = { fulfillmentStatus: status };
+    const updatePayload: {
+      fulfillmentStatus: string;
+      trackingNumber?: string;
+    } = { fulfillmentStatus: status };
     if (trackingNumber !== undefined) {
       updatePayload.trackingNumber = trackingNumber;
     }
@@ -184,7 +196,7 @@ export async function PATCH(req: Request) {
         <h4 style="margin: 0 0 15px 0; color: #111; font-size: 16px;">Order Summary</h4>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #555;">
           <tbody>
-            ${order.items && order.items.length > 0 ? order.items.map((item: any) => `
+            ${order.items && order.items.length > 0 ? order.items.map((item: OrderEmailItem) => `
               <tr>
                 <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;">
                   ${item.name} <span style="color: #888; margin-left: 5px;">x ${item.quantity}</span>

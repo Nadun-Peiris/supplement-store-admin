@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { sendEmail } from "@/lib/mail/nodemailer";
 import Order from "@/models/Order";
+import Subscription from "@/models/Subscription";
+
+type OrderEmailItem = {
+  name: string;
+  quantity: number;
+  price: number;
+};
 
 export async function PATCH(
   req: Request,
@@ -71,6 +78,25 @@ export async function PATCH(
 
     if (recipientEmail) {
       const formattedOrderId = order._id.toString().slice(-6).toUpperCase();
+      const subscriptionLookupConditions: Array<{
+        orderId?: typeof order._id;
+        _id?: typeof order._id;
+      }> = [{ orderId: order._id }];
+
+      if (order.subscription) {
+        subscriptionLookupConditions.push({ _id: order.subscription });
+      }
+
+      const linkedSubscription =
+        order.orderType === "subscription"
+          ? await Subscription.findOne({
+              $or: subscriptionLookupConditions,
+            })
+              .select("subscriptionId")
+              .lean()
+          : null;
+      const subscriptionId = linkedSubscription?.subscriptionId || null;
+      const isSubscriptionOrder = order.orderType === "subscription" || Boolean(subscriptionId);
 
       let message = "Your order status has been updated.";
       if (fulfillmentStatus === "fulfilled") {
@@ -103,12 +129,49 @@ export async function PATCH(
     </div>
 
     <div style="padding: 30px 20px;">
-      <h3 style="margin-top: 0; color: #111;">Order Update</h3>
+      <h3 style="margin-top: 0; color: #111;">${
+        isSubscriptionOrder && fulfillmentStatus === "fulfilled"
+          ? "ORDER CONFIRMED"
+          : "Order Update"
+      }</h3>
       <p style="color: #555; font-size: 15px; margin-bottom: 20px;">
         Order <strong>#${formattedOrderId}</strong>
       </p>
 
-      <p style="font-size: 16px; color: #333; line-height: 1.5;">${message}</p>
+      <p style="font-size: 16px; color: #333; line-height: 1.5;">
+        ${
+          isSubscriptionOrder && fulfillmentStatus === "fulfilled"
+            ? "Thank you for your order! Your payment has been confirmed and we are now processing your order."
+            : message
+        }
+      </p>
+
+      ${
+        isSubscriptionOrder
+          ? `
+      <div style="margin: 24px 0 0 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #333;">
+          <tbody>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Order type</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600;">Subscription Order</td>
+            </tr>
+            ${
+              subscriptionId
+                ? `
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Subscription ID</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600;">#${subscriptionId}</td>
+            </tr>
+            `
+                : ""
+            }
+          </tbody>
+        </table>
+      </div>
+      `
+          : ""
+      }
 
       <div style="
         margin: 20px 0;
@@ -157,16 +220,25 @@ export async function PATCH(
       <div style="margin-top: 30px; border-top: 1px solid #eaeaea; padding-top: 20px;">
         <h4 style="margin: 0 0 15px 0; color: #111; font-size: 16px;">Order Summary</h4>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #555;">
+          <thead>
+            <tr>
+              <th style="padding: 0 0 10px 0; text-align: left; color: #777; font-size: 12px; text-transform: uppercase;">Product</th>
+              <th style="padding: 0 0 10px 0; text-align: center; color: #777; font-size: 12px; text-transform: uppercase;">Qty</th>
+              <th style="padding: 0 0 10px 0; text-align: right; color: #777; font-size: 12px; text-transform: uppercase;">Total</th>
+            </tr>
+          </thead>
           <tbody>
             ${
               order.items && order.items.length > 0
                 ? order.items
                     .map(
-                      (item) => `
+                      (item: OrderEmailItem) => `
               <tr>
                 <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;">
                   ${item.name}
-                  <span style="color: #888; margin-left: 5px;">x ${item.quantity}</span>
+                </td>
+                <td style="padding: 10px 0; text-align: center; border-bottom: 1px solid #eaeaea;">
+                  ${item.quantity}
                 </td>
                 <td style="padding: 10px 0; text-align: right; border-bottom: 1px solid #eaeaea;">
                   LKR ${(item.price * item.quantity).toLocaleString()}
@@ -186,8 +258,24 @@ export async function PATCH(
           </tbody>
           <tfoot>
             <tr>
-              <td style="padding: 15px 0 0 0; font-weight: bold; color: #111; font-size: 16px;">
-                Total
+              <td colspan="2" style="padding: 15px 0 0 0; font-weight: bold; color: #111; font-size: 14px;">
+                Subtotal
+              </td>
+              <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #111; font-size: 14px;">
+                LKR ${typeof order.subtotal === "number" ? order.subtotal.toLocaleString() : order.total.toLocaleString()}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 10px 0 0 0; font-weight: bold; color: #111; font-size: 14px;">
+                Shipping
+              </td>
+              <td style="padding: 10px 0 0 0; text-align: right; font-weight: bold; color: #111; font-size: 14px;">
+                LKR ${typeof order.shippingCost === "number" ? order.shippingCost.toLocaleString() : "0"}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding: 15px 0 0 0; font-weight: bold; color: #111; font-size: 16px;">
+                Grand Total
               </td>
               <td style="padding: 15px 0 0 0; text-align: right; font-weight: bold; color: #01C7FE; font-size: 18px;">
                 LKR ${order.total ? order.total.toLocaleString() : "0"}
@@ -198,7 +286,14 @@ export async function PATCH(
       </div>
 
       <p style="font-size: 14px; color: #777; margin-top: 30px; line-height: 1.5;">
-        Thank you for shopping with us! We will keep you updated if there are any further changes to your order.
+        ${
+          isSubscriptionOrder && fulfillmentStatus === "fulfilled"
+            ? "We will notify you when your order is shipped."
+            : "Thank you for shopping with us! We will keep you updated if there are any further changes to your order."
+        }
+      </p>
+      <p style="font-size: 14px; color: #777; margin-top: 16px; line-height: 1.5;">
+        If you have any questions, simply reply to this email.
       </p>
     </div>
 
