@@ -11,6 +11,25 @@ type OrderEmailItem = {
   quantity: number;
 };
 
+const resolveOrderType = (
+  order: {
+    _id: unknown;
+    orderType?: "normal" | "subscription";
+    subscription?: unknown;
+  },
+  subscriptionOrderIds: Set<string>
+): "normal" | "subscription" => {
+  if (order.orderType === "normal" || order.orderType === "subscription") {
+    return order.orderType;
+  }
+
+  const isSubscriptionOrder =
+    Boolean(order.subscription) ||
+    subscriptionOrderIds.has(String(order._id));
+
+  return isSubscriptionOrder ? "subscription" : "normal";
+};
+
 // ✅ GET ORDERS (UNCHANGED)
 export async function GET(req: Request) {
   try {
@@ -34,16 +53,10 @@ export async function GET(req: Request) {
         .map((sub) => String(sub.orderId))
     );
 
-    const ordersWithType = orders.map((order) => {
-      const isSubscriptionOrder =
-        Boolean(order.subscription) ||
-        subscriptionOrderIds.has(String(order._id));
-
-      return {
-        ...order,
-        orderType: isSubscriptionOrder ? "subscription" : "normal",
-      };
-    });
+    const ordersWithType = orders.map((order) => ({
+      ...order,
+      orderType: resolveOrderType(order, subscriptionOrderIds),
+    }));
 
     const filteredOrders =
       requestedType === "all"

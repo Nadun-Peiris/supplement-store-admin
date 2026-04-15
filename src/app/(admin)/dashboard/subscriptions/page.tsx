@@ -46,6 +46,9 @@ export default function SubscriptionsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [sendingReminderEmails, setSendingReminderEmails] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
 
   const loadSubscriptions = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -130,6 +133,28 @@ export default function SubscriptionsPage() {
     [subscriptions]
   );
 
+  const reminderEligibleSubscriptions = useMemo(() => {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 5);
+
+    const targetStart = new Date(targetDate);
+    targetStart.setHours(0, 0, 0, 0);
+
+    const targetEnd = new Date(targetDate);
+    targetEnd.setHours(23, 59, 59, 999);
+
+    return subscriptions.filter((sub) => {
+      const normalizedStatus = (sub.status || "").toLowerCase();
+
+      if (normalizedStatus !== "active" || !sub.nextBillingDate) {
+        return false;
+      }
+
+      const renewalDate = new Date(sub.nextBillingDate);
+      return renewalDate >= targetStart && renewalDate <= targetEnd;
+    });
+  }, [subscriptions]);
+
   const markSubscriptionAsViewed = useCallback(async (subscriptionId: string) => {
     try {
       const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
@@ -196,6 +221,43 @@ export default function SubscriptionsPage() {
     }
   };
 
+  const sendReminderEmails = useCallback(async () => {
+    setSendingReminderEmails(true);
+    setReminderMessage(null);
+    setReminderError(null);
+
+    try {
+      const res = await fetch("/api/subscriptions/reminders", {
+        method: "POST",
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Failed to send reminder emails (${res.status})`);
+      }
+
+      const sentCount = Number(data?.sentCount || 0);
+      const skippedCount = Number(data?.skippedCount || 0);
+      const parts = [`Sent ${sentCount} reminder email${sentCount === 1 ? "" : "s"}`];
+
+      if (skippedCount > 0) {
+        parts.push(`${skippedCount} skipped due to missing email`);
+      }
+
+      setReminderMessage(parts.join(". ") + ".");
+    } catch (error) {
+      console.error(error);
+      setReminderError(
+        error instanceof Error
+          ? error.message
+          : "Failed to send reminder emails."
+      );
+    } finally {
+      setSendingReminderEmails(false);
+    }
+  }, []);
+
   /* ---------------- HELPERS ---------------- */
   const getStatusBadge = (statusStr: string) => {
     const normalized = (statusStr || "").toLowerCase();
@@ -242,6 +304,19 @@ export default function SubscriptionsPage() {
             <p className="text-sm text-gray-500">Track recurring orders and installment plans.</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            {reminderEligibleSubscriptions.length > 0 && (
+              <button
+                type="button"
+                onClick={sendReminderEmails}
+                disabled={sendingReminderEmails}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#00b2e3] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Mail size={16} />
+                {sendingReminderEmails
+                  ? "Sending reminders..."
+                  : `Send Reminder Email (${reminderEligibleSubscriptions.length})`}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => loadSubscriptions(true)}
@@ -269,6 +344,20 @@ export default function SubscriptionsPage() {
             </div>
           </div>
         </div>
+
+        {(reminderMessage || reminderError) && (
+          <div className="w-full sm:max-w-md">
+            <div
+              className={`rounded-lg border px-4 py-2 text-sm ${
+                reminderError
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {reminderError || reminderMessage}
+            </div>
+          </div>
+        )}
         
         {/* Stats Pill */}
         <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm">
