@@ -40,10 +40,10 @@ type SidebarOrder = {
 };
 type SidebarSubscription = {
   createdAt?: string;
+  adminViewed?: boolean;
 };
 
 const PENDING_PAYMENTS_VIEWED_AT_KEY = "admin-sidebar-pending-payments-viewed-at";
-const SUBSCRIPTIONS_VIEWED_AT_KEY = "admin-sidebar-subscriptions-viewed-at";
 
 const navItems = [
   { name: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
@@ -220,10 +220,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     if (pathname === "/dashboard/pending-payments") {
       window.localStorage.setItem(PENDING_PAYMENTS_VIEWED_AT_KEY, new Date().toISOString());
     }
-
-    if (pathname === "/dashboard/subscriptions") {
-      window.localStorage.setItem(SUBSCRIPTIONS_VIEWED_AT_KEY, new Date().toISOString());
-    }
   }, [pathname]);
 
   useEffect(() => {
@@ -248,22 +244,45 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         ]);
 
         const orders: SidebarOrder[] = Array.isArray(ordersPayload.orders) ? ordersPayload.orders : [];
-        const subscriptions = Array.isArray(subscriptionsPayload.subscriptions)
+        const subscriptions: SidebarSubscription[] = Array.isArray(subscriptionsPayload.subscriptions)
           ? subscriptionsPayload.subscriptions
           : [];
         const pendingPaymentsViewedAt =
           typeof window === "undefined"
             ? ""
             : window.localStorage.getItem(PENDING_PAYMENTS_VIEWED_AT_KEY) || "";
-        const subscriptionsViewedAt =
-          typeof window === "undefined"
-            ? ""
-            : window.localStorage.getItem(SUBSCRIPTIONS_VIEWED_AT_KEY) || "";
-        const pendingPaymentsViewedAtMs = pendingPaymentsViewedAt
-          ? new Date(pendingPaymentsViewedAt).getTime()
-          : 0;
-        const subscriptionsViewedAtMs = subscriptionsViewedAt
-          ? new Date(subscriptionsViewedAt).getTime()
+        const firstPendingPaymentCreatedAtMs = orders
+          .filter((order) => (order.paymentStatus || "pending").toLowerCase() === "pending")
+          .reduce<number | null>((earliest, order) => {
+            const createdAtMs = new Date(order.createdAt || 0).getTime();
+
+            if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) {
+              return earliest;
+            }
+
+            if (earliest === null || createdAtMs < earliest) {
+              return createdAtMs;
+            }
+
+            return earliest;
+          }, null);
+
+        if (
+          typeof window !== "undefined" &&
+          !pendingPaymentsViewedAt &&
+          firstPendingPaymentCreatedAtMs !== null
+        ) {
+          const baseline = new Date(firstPendingPaymentCreatedAtMs).toISOString();
+          window.localStorage.setItem(PENDING_PAYMENTS_VIEWED_AT_KEY, baseline);
+        }
+
+        const effectivePendingPaymentsViewedAt =
+          pendingPaymentsViewedAt ||
+          (firstPendingPaymentCreatedAtMs !== null
+            ? new Date(firstPendingPaymentCreatedAtMs).toISOString()
+            : "");
+        const pendingPaymentsViewedAtMs = effectivePendingPaymentsViewedAt
+          ? new Date(effectivePendingPaymentsViewedAt).getTime()
           : 0;
 
         if (!isCancelled) {
@@ -279,10 +298,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 createdAtMs > pendingPaymentsViewedAtMs
               );
             }).length,
-            subscriptions: (subscriptions as SidebarSubscription[]).filter((subscription) => {
-              const createdAtMs = new Date(subscription.createdAt || 0).getTime();
-              return createdAtMs > subscriptionsViewedAtMs;
-            }).length,
+            subscriptions: subscriptions.filter((subscription) => !subscription.adminViewed).length,
           });
         }
       } catch (error) {
