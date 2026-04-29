@@ -17,17 +17,25 @@ const Player = dynamic(
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(true);
+  const [isLoaderFading, setIsLoaderFading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-      setTimeout(() => setShowForm(true), 300);
+    const loaderTimer = window.setTimeout(() => {
+      setIsLoaderFading(true);
+      setShowForm(true);
     }, 2500);
-    return () => clearTimeout(timer);
+    const removeLoaderTimer = window.setTimeout(() => {
+      setShowLoader(false);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(loaderTimer);
+      window.clearTimeout(removeLoaderTimer);
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -101,19 +109,21 @@ export default function AdminLoginPage() {
     }
   };
 
-  const inputClass = "w-full rounded-xl border border-[#cfeef7] bg-[#fbfdff] p-3 pl-10 text-sm outline-none transition-all focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20";
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f2fbff]">
-        <Player autoplay loop src="/animations/loading.json" className="h-64 w-64" />
-      </main>
-    );
-  }
+  const inputClass = "w-full rounded-xl border border-[#cfeef7] bg-[#fbfdff] p-3 pl-10 text-sm text-[#111] outline-none transition-all placeholder:font-semibold placeholder:text-[#bcc6d3] focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f2fbff] px-4">
-      <div className={`w-full max-w-[420px] rounded-[32px] border border-white bg-white/80 p-10 shadow-[0_20px_50px_rgba(3,199,254,0.1)] backdrop-blur-xl transition-all duration-500 ${showForm ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f2fbff] px-4">
+      {showLoader ? (
+        <div
+          className={`absolute inset-0 z-10 flex items-center justify-center bg-[#f2fbff] transition-opacity duration-500 ${
+            isLoaderFading ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
+        >
+          <Player autoplay loop src="/animations/loading.json" className="h-64 w-64" />
+        </div>
+      ) : null}
+
+      <div className={`w-full max-w-[420px] rounded-[32px] border border-white bg-white/80 p-10 shadow-[0_20px_50px_rgba(3,199,254,0.1)] backdrop-blur-xl transition-all duration-500 ${showForm ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
         
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]">
@@ -123,15 +133,25 @@ export default function AdminLoginPage() {
         </div>
 
         <form onSubmit={resetMode ? handleForgotPassword : handleLogin} className="space-y-4">
-          <div className="relative">
-            <FaEnvelope className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
-            <input type="email" placeholder="Email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-[#bcc6d3]">
+              Email
+            </label>
+            <div className="relative">
+              <FaEnvelope className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
+              <input type="email" placeholder="Email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
           </div>
 
           {!resetMode && (
-            <div className="relative">
-              <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
-              <input type="password" placeholder="Password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div>
+              <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-[#bcc6d3]">
+                Password
+              </label>
+              <div className="relative">
+                <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
+                <input type="password" placeholder="Password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
             </div>
           )}
 
