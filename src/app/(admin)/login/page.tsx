@@ -3,31 +3,25 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { FirebaseError } from "firebase/app";
-import {
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signOut,
-} from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import styles from "./login.module.css";
+import { FaLock, FaEnvelope } from "react-icons/fa";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
-// ✅ Dynamically import Lottie Player (client-only)
 const Player = dynamic(
   () => import("@lottiefiles/react-lottie-player").then((mod) => mod.Player),
   { ssr: false }
 );
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  // 🌀 Loader transition animation
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -36,175 +30,120 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🔹 Handle login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError("");
-    setMessage("");
 
     try {
-      // Firebase Auth login
       const credentials = await signInWithEmailAndPassword(auth, email, password);
-
-      // ✅ Get Firebase ID token
       const token = await credentials.user.getIdToken();
 
-      // ✅ Validate role before allowing dashboard access
       const roleCheckResponse = await fetch("/api/auth/validate-role", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!roleCheckResponse.ok) {
         await signOut(auth);
-        document.cookie =
-          "firebaseToken=; path=/; max-age=0; Secure; SameSite=Strict";
-        setError("❌ Not allowed. Only admin or superadmin can log in.");
+        toast.error("Access denied. Admin privileges required.");
         return;
       }
 
-      // ✅ Store token in secure cookie for middleware auth
-      if (token) {
-        document.cookie = `firebaseToken=${token}; path=/; max-age=3600; Secure; SameSite=Strict`;
-      }
-
-      // Redirect to dashboard
+      document.cookie = `firebaseToken=${token}; path=/; max-age=3600; Secure; SameSite=Strict`;
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
-        if (err.code === "auth/invalid-credential") {
-          setError("❌ Invalid email or password.");
-          return;
-        }
-
-        if (err.code === "auth/too-many-requests") {
-          setError("❌ Too many attempts. Please try again later.");
-          return;
-        }
-
-        if (err.code === "auth/user-disabled") {
-          setError("❌ This account is disabled.");
-          return;
-        }
+        toast.error(err.code === "auth/invalid-credential" ? "Invalid credentials" : "Login failed");
       }
-
-      console.error("Login error:", err);
-      setError("❌ Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 🔹 Handle password reset
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Please enter your email to reset password.");
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      toast.error("Please enter your email");
       return;
     }
 
     setSubmitting(true);
-    setError("");
-    setMessage("");
 
     try {
-      await sendPasswordResetEmail(auth, email);
-      setMessage("✅ Password reset link sent. Check your inbox.");
-    } catch {
-      setError("❌ Failed to send reset link. Try again.");
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: trimmedEmail }),
+      });
+
+      const data = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to send reset link");
+      }
+
+      toast.success(data?.message || "Reset link sent to your inbox!");
+      setResetMode(false);
+    } catch (err) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Failed to send reset link");
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  const inputClass = "w-full rounded-xl border border-[#cfeef7] bg-[#fbfdff] p-3 pl-10 text-sm outline-none transition-all focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20";
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f2fbff]">
+        <Player autoplay loop src="/animations/loading.json" className="h-64 w-64" />
+      </main>
+    );
+  }
+
   return (
-    <main className={styles.main}>
-      {/* 🌀 Loading Animation */}
-      {loading && (
-        <div
-          className={`${styles.loaderWrapper} ${
-            !loading ? styles.fadeOut : ""
-          }`}
-        >
-          <Player
-            autoplay
-            loop
-            src="/animations/loading.json" // ensure this file is in /public/animations/
-            className={styles.lottiePlayer}
-          />
+    <main className="flex min-h-screen items-center justify-center bg-[#f2fbff] px-4">
+      <div className={`w-full max-w-[420px] rounded-[32px] border border-white bg-white/80 p-10 shadow-[0_20px_50px_rgba(3,199,254,0.1)] backdrop-blur-xl transition-all duration-500 ${showForm ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]">
+            <FaLock size={24} />
+          </div>
+          <h1 className="text-2xl font-black text-[#111]">{resetMode ? "Reset Password" : "Admin Login"}</h1>
         </div>
-      )}
 
-      {/* 🔐 Login / Reset Form */}
-      {showForm && (
-        <form
-          onSubmit={handleLogin}
-          className={`${styles.form} ${showForm ? styles.fadeIn : ""}`}
-        >
-          <h1 className={styles.title}>
-            {resetMode ? "Reset Password" : "Admin Login"}
-          </h1>
+        <form onSubmit={resetMode ? handleForgotPassword : handleLogin} className="space-y-4">
+          <div className="relative">
+            <FaEnvelope className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
+            <input type="email" placeholder="Email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
 
-          {/* Email */}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={styles.input}
-            required
-          />
-
-          {/* Password */}
           {!resetMode && (
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={styles.input}
-              required
-            />
+            <div className="relative">
+              <FaLock className="absolute left-3.5 top-3.5 text-gray-400" size={14} />
+              <input type="password" placeholder="Password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
           )}
 
-          {/* Buttons */}
-          {resetMode ? (
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              disabled={submitting}
-              className={styles.submitBtn}
-            >
-              {submitting ? "Sending..." : "Send Reset Link"}
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={submitting}
-              className={styles.submitBtn}
-            >
-              {submitting ? "Logging in..." : "Login"}
-            </button>
-          )}
-
-          {/* Forgot Password Toggle */}
-          <p className={styles.forgotText}>
-            <button
-              type="button"
-              onClick={() => setResetMode(!resetMode)}
-              className={styles.forgotLink}
-            >
-              {resetMode ? "← Back to Login" : "Forgot Password?"}
-            </button>
-          </p>
-
-          {/* Feedback */}
-          {error && <p className={styles.error}>{error}</p>}
-          {message && <p className={styles.success}>{message}</p>}
+          <button type="submit" disabled={submitting} className="w-full rounded-2xl bg-[#03c7fe] py-4 text-sm font-black text-white shadow-[0_10px_25px_rgba(3,199,254,0.3)] transition-all hover:scale-[1.02] disabled:opacity-50">
+            {submitting ? <Loader2 className="mx-auto animate-spin" /> : (resetMode ? "Send Reset Link" : "Sign In")}
+          </button>
         </form>
-      )}
+
+        <button onClick={() => setResetMode(!resetMode)} className="mt-6 w-full text-center text-xs font-bold text-[#03c7fe] hover:underline">
+          {resetMode ? "← Back to Login" : "Forgot Password?"}
+        </button>
+      </div>
     </main>
   );
 }
