@@ -69,18 +69,15 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-20 w-full border-b border-gray-200 bg-white">
-      {/* Uses flex-col on mobile so the search bar sits under the top row, 
-        and snaps to a single horizontal row on desktop (lg:flex-row) 
-      */}
-      <div className="flex w-full flex-col gap-4 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+    <header className="sticky top-0 z-20 w-full border-b border-[#cfeef7] bg-white/80 backdrop-blur-xl">
+      <div className="flex w-full flex-col gap-4 px-4 py-4 sm:px-6 lg:h-20 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-0">
         
         {/* Left Section: Mobile Menu Toggle & Search Bar */}
-        <div className="flex w-full flex-1 items-center gap-3 lg:max-w-md">
+        <div className="flex w-full flex-1 items-center gap-4 lg:max-w-md">
           {/* Mobile Menu Button */}
           <button
             type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900 lg:hidden"
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#cfeef7] bg-white text-[#aaa] shadow-sm transition hover:border-[#03c7fe] hover:text-[#03c7fe] lg:hidden"
             onClick={onToggleSidebar}
             aria-label="Toggle sidebar"
           >
@@ -89,35 +86,37 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
 
           {/* Search Input Wrapper */}
           <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search size={18} className="text-gray-400" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+              <Search size={16} className="text-[#aaa]" />
             </div>
             <input
               type="text"
               placeholder="Search orders..."
-              className="block w-full rounded-lg border border-gray-300 bg-gray-50 py-2 pl-10 pr-3 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+              className="block w-full rounded-2xl border border-[#cfeef7] bg-[#fbfdff] py-3 pl-10 pr-4 text-xs font-bold text-[#111] outline-none transition focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20"
             />
           </div>
         </div>
 
         {/* Right Section: Profile Info */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-5">
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            className="rounded-2xl border border-[#cfeef7] bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-[#888] transition hover:bg-[#f2fbff] hover:text-[#111]"
           >
             Log Out
           </button>
 
-          <div className="flex flex-col text-right">
-            <p className="text-sm font-semibold text-gray-900">{displayName}</p>
-            <p className="text-xs font-medium text-gray-500">{roleLabel}</p>
-          </div>
-          
-          {/* Initial Avatar */}
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#01C7FE]/10 text-sm font-bold text-[#01C7FE] ring-1 ring-inset ring-[#01C7FE]/20">
-            {avatarLabel}
+          <div className="flex items-center gap-4 border-l border-[#cfeef7] pl-5">
+            <div className="flex flex-col text-right">
+              <p className="text-xs font-black text-[#111]">{displayName}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">{roleLabel}</p>
+            </div>
+            
+            {/* Initial Avatar */}
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#03c7fe] text-sm font-black text-white shadow-[0_4px_10px_rgba(3,199,254,0.3)]">
+              {avatarLabel}
+            </div>
           </div>
         </div>
 

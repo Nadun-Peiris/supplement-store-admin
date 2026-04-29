@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GripVertical, Trash2, CheckCircle2, AlertCircle, Info, ArrowLeft } from "lucide-react";
+import {
+  GripVertical,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  ArrowLeft,
+  Layers,
+} from "lucide-react";
+import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 import {
   DndContext,
@@ -46,6 +55,15 @@ type Toast = {
   id: number;
 };
 
+/* ─── Shared UI Component ────────────────────────────────────────── */
+function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-[28px] border border-white bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)] ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 // --- Sortable Row Component ---
 function SortableFeaturedRow({
   item,
@@ -76,13 +94,15 @@ function SortableFeaturedRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-3 transition-all ${
-        isDragging ? "scale-[1.02] opacity-80 shadow-xl ring-2 ring-[#01C7FE]" : "shadow-sm hover:shadow-md"
+      className={`flex items-center justify-between gap-4 rounded-2xl border bg-white p-4 transition-all ${
+        isDragging
+          ? "scale-[1.02] border-[#03c7fe] opacity-90 shadow-2xl ring-2 ring-[#03c7fe]/20"
+          : "border-[#cfeef7] shadow-sm hover:border-[#03c7fe]"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {/* Order Badge */}
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2fbff] text-xs font-black text-[#03c7fe]">
           {index + 1}
         </span>
         
@@ -91,27 +111,29 @@ function SortableFeaturedRow({
           ref={setActivatorNodeRef}
           {...listeners}
           {...attributes}
-          className="cursor-grab text-gray-400 transition-colors hover:text-[#01C7FE] active:cursor-grabbing"
+          className="cursor-grab text-[#aaa] transition-colors hover:text-[#03c7fe] active:cursor-grabbing"
         >
           <GripVertical size={20} />
         </div>
 
         {/* Info */}
-        <div className="flex items-center gap-3 pl-2">
-          <img src={item.category.image} alt={item.category.name} className="h-10 w-14 rounded-md bg-gray-50 object-cover" />
+        <div className="flex items-center gap-4 pl-2">
+          <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl border border-[#cfeef7] bg-[#fbfdff] p-1">
+            <img src={item.category.image || "/placeholder.png"} alt={item.category.name} className="h-full w-full rounded-lg object-cover" />
+          </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold text-gray-900">{item.category.name}</span>
-            <span className="text-xs text-gray-500">/{item.category.slug}</span>
+            <span className="text-sm font-black text-[#111]">{item.category.name}</span>
+            <span className="text-[10px] font-bold text-[#aaa]">/{item.category.slug}</span>
           </div>
         </div>
       </div>
 
       <button
         onClick={() => onRemove(item._id)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#aaa] transition-colors hover:bg-red-50 hover:text-red-500"
         title="Remove from featured"
       >
-        <Trash2 size={16} />
+        <Trash2 size={18} />
       </button>
     </div>
   );
@@ -122,6 +144,7 @@ export default function FeaturedCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<Featured[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -153,6 +176,8 @@ export default function FeaturedCategoriesPage() {
     } catch (error) {
       console.error("Fetch error", error);
       showToast("Failed to load categories.", "error");
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -220,95 +245,114 @@ export default function FeaturedCategoriesPage() {
 
   const activeItem = activeId ? featured.find(f => f._id === activeId) : null;
 
+  if (pageLoading) {
+    return <PageLoader icon={Layers} label="Loading Featured Categories..." />;
+  }
+
   return (
-    <div className="flex flex-col gap-8 relative min-h-[80vh]">
+    <main className="min-h-screen bg-[#f2fbff] px-4 py-8 md:px-8">
       
       {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg transition-all animate-in slide-in-from-right-8 pointer-events-auto ${
+            className={`pointer-events-auto flex items-center gap-3 rounded-2xl px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(0,0,0,0.1)] transition-all animate-in slide-in-from-right-8 ${
               toast.type === "success"
-                ? "bg-emerald-600"
+                ? "bg-emerald-500"
                 : toast.type === "error"
-                ? "bg-red-600"
-                : "bg-gray-800"
+                ? "bg-red-500"
+                : "bg-[#111]"
             }`}
           >
-            {toast.type === "success" && <CheckCircle2 size={18} />}
-            {toast.type === "error" && <AlertCircle size={18} />}
-            {toast.type === "info" && <Info size={18} />}
+            {toast.type === "success" && <CheckCircle2 size={16} />}
+            {toast.type === "error" && <AlertCircle size={16} />}
+            {toast.type === "info" && <Info size={16} />}
             {toast.message}
           </div>
         ))}
       </div>
 
-      {/* Page Header */}
-      <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
+      {/* Header Panel */}
+      <Panel className="mb-6 flex flex-col gap-6 p-7 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
           <Link
             href="/dashboard/categories"
-            className="mb-2 inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm transition-colors hover:border-[#01C7FE] hover:text-[#01C7FE]"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#cfeef7] bg-white text-[#111] transition hover:border-[#03c7fe] hover:text-[#03c7fe]"
           >
-            <ArrowLeft size={16} />
-            Back
+            <ArrowLeft size={22} />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Featured Categories</h1>
-          <p className="text-sm text-gray-500">Drag to reorder how categories appear on your homepage</p>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Web Management</p>
+            <h1 className="text-2xl font-black text-[#111]">Featured Categories</h1>
+          </div>
         </div>
-        <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 shadow-sm ${
-          featured.length >= 8 ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"
-        }`}>
-          <span className="text-sm font-medium text-gray-500">Slots Filled:</span>
-          <strong className={`text-lg font-bold ${featured.length >= 8 ? "text-red-600" : "text-[#01C7FE]"}`}>
+        <div
+          className={`flex items-center gap-3 rounded-2xl border px-5 py-3 ${
+            featured.length >= 8
+              ? "border-red-200 bg-[#fff5f5]"
+              : "border-[#cfeef7] bg-white"
+          }`}
+        >
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Slots Filled:</span>
+          <strong
+            className={`text-lg font-black ${
+              featured.length >= 8 ? "text-red-500" : "text-[#03c7fe]"
+            }`}
+          >
             {featured.length} / 8
           </strong>
         </div>
-      </header>
+      </Panel>
 
       {/* Main Layout Grid */}
-      <main className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         
-        {/* LEFT: Available Categories */}
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-gray-900">Available Categories</h2>
+        {/* LEFT: Available Categories Panel */}
+        <Panel className="p-6">
+          <h2 className="mb-5 flex items-center gap-2 border-b border-[#e0f4fb] pb-4 text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
+            <Layers size={14} /> Available Categories
+          </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {categories.map((cat) => {
               const active = isFeatured(cat._id);
               return (
                 <div 
                   key={cat._id} 
-                  className={`flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
-                    active ? "border-[#01C7FE] ring-1 ring-[#01C7FE] opacity-60" : "border-gray-200 hover:shadow-md"
+                  className={`flex flex-col overflow-hidden rounded-2xl border bg-white transition-all ${
+                    active 
+                      ? "border-[#03c7fe] opacity-60 ring-1 ring-[#03c7fe]" 
+                      : "border-[#cfeef7] hover:border-[#03c7fe]"
                   }`}
                 >
-                  <div className="h-24 w-full bg-gray-100 overflow-hidden">
-                    <img src={cat.image} alt={cat.name} className="h-full w-full object-cover" />
+                  <div className="flex h-24 w-full items-center justify-center border-b border-[#cfeef7] bg-[#fbfdff] p-4">
+                    <img src={cat.image || "/placeholder.png"} alt={cat.name} className="h-full w-full rounded-lg object-cover" />
                   </div>
-                  <div className="flex flex-col gap-3 p-3">
-                    <h4 className="text-sm font-bold text-gray-900 truncate">{cat.name}</h4>
+                  <div className="flex flex-col gap-3 p-4">
+                    <h4 className="truncate text-xs font-black text-[#111]">{cat.name}</h4>
                     <button
                       disabled={active || featured.length >= 8 || loading}
                       onClick={() => handleAddFeatured(cat._id)}
-                      className={`w-full rounded-md py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
+                      className={`w-full rounded-xl py-2 text-[10px] font-black uppercase tracking-wider transition-colors disabled:cursor-not-allowed ${
                         active 
-                          ? "bg-gray-100 text-gray-400" 
-                          : "bg-[#01C7FE]/10 text-[#01C7FE] hover:bg-[#01C7FE] hover:text-white"
+                          ? "bg-[#f2fbff] text-[#aaa]" 
+                          : "bg-[#03c7fe] text-white hover:bg-[#02a9d8] shadow-[0_4px_14px_rgba(3,199,254,0.2)]"
                       }`}
                     >
-                      {active ? "Selected" : "Add to Featured"}
+                      {active ? "Selected" : "Add Category"}
                     </button>
                   </div>
                 </div>
               );
             })}
           </div>
-        </section>
+        </Panel>
 
-        {/* RIGHT: Display Order (Draggable) */}
-        <section className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-inner">
-          <h2 className="text-lg font-bold text-gray-900">Homepage Display Order</h2>
+        {/* RIGHT: Display Order Panel */}
+        <Panel className="p-6 bg-[#fbfdff]">
+          <h2 className="mb-5 flex items-center gap-2 border-b border-[#e0f4fb] pb-4 text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
+            Homepage Display Order
+          </h2>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -326,9 +370,9 @@ export default function FeaturedCategoriesPage() {
                   />
                 ))}
                 {featured.length === 0 && (
-                  <div className="flex h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white text-gray-500">
-                    <p className="text-sm">No featured categories yet.</p>
-                    <p className="text-xs">Add some from the left.</p>
+                  <div className="flex h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#cfeef7] bg-white text-[#888]">
+                    <p className="text-xs font-black uppercase tracking-widest text-[#aaa]">No featured categories yet</p>
+                    <p className="mt-1 text-[10px] font-bold">Select categories from the left panel.</p>
                   </div>
                 )}
               </div>
@@ -337,18 +381,24 @@ export default function FeaturedCategoriesPage() {
             {/* Dragging Overlay Clone */}
             <DragOverlay>
               {activeItem ? (
-                <div className="flex items-center gap-4 rounded-xl border-2 border-[#01C7FE] bg-white p-3 shadow-2xl opacity-90">
-                   <div className="flex items-center gap-3 pl-2">
-                    <img src={activeItem.category.image} alt="" className="h-10 w-14 rounded-md bg-gray-50 object-cover" />
-                    <span className="text-sm font-bold text-gray-900">{activeItem.category.name}</span>
+                <div className="flex items-center gap-4 rounded-2xl border-2 border-[#03c7fe] bg-white p-4 shadow-2xl opacity-90">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2fbff] text-xs font-black text-[#03c7fe]">
+                    {featured.findIndex((item) => item._id === activeItem._id) + 1}
+                  </span>
+                  <GripVertical size={20} className="text-[#03c7fe]" />
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl border border-[#cfeef7] bg-[#fbfdff] p-1">
+                      <img src={activeItem.category.image || "/placeholder.png"} alt="" className="h-full w-full rounded-lg object-cover" />
+                    </div>
+                    <span className="text-sm font-black text-[#111]">{activeItem.category.name}</span>
                   </div>
                 </div>
               ) : null}
             </DragOverlay>
           </DndContext>
-        </section>
+        </Panel>
 
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import { ArrowLeft, ArrowRight, CheckSquare, ImagePlus, Edit2, Trash2, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, Edit2, Trash2, Plus, Search, X, Layers, Star } from "lucide-react";
+import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 type Category = {
   _id: string;
@@ -11,6 +12,15 @@ type Category = {
   slug: string;
   image: string;
 };
+
+/* ─── Shared UI Component ────────────────────────────────────────── */
+function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-[28px] border border-white bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)] ${className}`}>
+      {children}
+    </div>
+  );
+}
 
 const ITEMS_PER_PAGE = 20;
 
@@ -28,6 +38,7 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +53,8 @@ export default function CategoriesPage() {
       );
     } catch (error) {
       console.error("Failed to fetch categories", error);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -208,154 +221,144 @@ export default function CategoriesPage() {
     resetForm();
   };
 
+  if (pageLoading) {
+    return <PageLoader icon={Layers} label="Loading Categories..." />;
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-            <p className="text-sm text-gray-500 sm:hidden">Manage your product taxonomy.</p>
+    <main className="min-h-screen bg-[#f2fbff] px-4 py-8 md:px-8">
+      {/* Page Header Panel */}
+      <Panel className="mb-6 flex flex-col gap-6 p-7 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]">
+            <Layers size={22} />
           </div>
-          <div className="relative w-full sm:w-72">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Taxonomy Management</p>
+            <h1 className="text-2xl font-black text-[#111]">Categories</h1>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            href="/dashboard/categories/featured-categories"
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-[#cfeef7] bg-white px-5 py-3 text-xs font-black text-[#03c7fe] transition hover:border-[#03c7fe]"
+          >
+            <Star size={14} /> Featured
+          </Link>
+          <div className="relative w-full sm:w-64">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa]" />
             <input
               type="text"
               placeholder="Search categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE]"
+              className="w-full rounded-2xl border border-[#cfeef7] bg-white py-3 pl-10 pr-4 text-xs font-bold text-[#111] outline-none transition focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSelectAllCategories}
-            disabled={currentPageCategoryIds.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <CheckSquare size={16} />
-            {allVisibleSelected ? "Clear Selection" : "Select All"}
-          </button>
-          <Link
-            href="/dashboard/webmanagement/featured-categories"
-            className="inline-flex items-center justify-center rounded-lg border border-[#01C7FE] px-4 py-2 text-sm font-semibold text-[#01C7FE] shadow-sm transition-colors hover:bg-[#01C7FE]/10"
-          >
-            Featured Categories
-          </Link>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[#03c7fe] px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(3,199,254,0.3)] transition hover:scale-[1.02]"
           >
-            <Plus size={18} />
-            Add Category
+            <Plus size={14} /> Add Category
           </button>
         </div>
-      </header>
+      </Panel>
 
-      {/* Data Table */}
-      <main className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-500">
-            {selectedCategoryIds.length > 0
-              ? `${selectedCategoryIds.length} selected`
-              : `${filteredCategories.length} categor${filteredCategories.length === 1 ? "y" : "ies"} found`}
+      {/* Data Table Panel */}
+      <Panel className="p-6">
+        <div className="mb-4 flex items-center justify-between border-b border-[#e0f4fb] pb-4">
+          <div className="flex gap-4">
+            <button
+              onClick={handleSelectAllCategories}
+              className="text-[10px] font-black uppercase text-[#03c7fe] hover:underline"
+            >
+              {allVisibleSelected ? "Clear Selection" : "Select Page"}
+            </button>
+            {selectedCategoryIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={deleteLoading}
+                className="text-[10px] font-black uppercase text-red-500 hover:underline disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting..." : `Delete Selected (${selectedCategoryIds.length})`}
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#aaa]">
+            {filteredCategories.length} total categories
           </p>
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            disabled={selectedCategoryIds.length === 0 || deleteLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Trash2 size={16} />
-            {deleteLoading ? "Deleting..." : "Delete Selected"}
-          </button>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[700px] border-collapse">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={handleSelectAllCategories}
-                    disabled={currentPageCategoryIds.length === 0}
-                    className="h-4 w-4 rounded border-gray-300 text-[#01C7FE] focus:ring-[#01C7FE]"
-                    aria-label="Select all categories"
-                  />
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
+                  Selection
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
                   Cover Image
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
                   Category Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
                   Slug Path
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody>
               {paginatedCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
-                    No categories found.
+                  <td colSpan={5} className="py-12 text-center text-sm font-bold text-[#aaa]">
+                    No categories found matching your criteria.
                   </td>
                 </tr>
               ) : (
                 paginatedCategories.map((cat) => (
-                  <tr key={cat._id} className="transition-colors hover:bg-gray-50">
+                  <tr key={cat._id} className="border-t border-[#e0f4fb] transition hover:bg-[#f2fbff]">
                     <td className="whitespace-nowrap px-6 py-4">
                       <input
                         type="checkbox"
                         checked={selectedCategoryIds.includes(cat._id)}
                         onChange={() => toggleCategorySelection(cat._id)}
-                        className="h-4 w-4 rounded border-gray-300 text-[#01C7FE] focus:ring-[#01C7FE]"
-                        aria-label={`Select ${cat.name}`}
+                        className="accent-[#03c7fe]"
                       />
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="h-12 w-20 overflow-hidden rounded-md border border-gray-200 bg-gray-100">
-                        <img
-                          src={cat.image || "/placeholder.png"}
-                          alt={cat.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
+                      <img
+                        src={cat.image || "/placeholder.png"}
+                        alt={cat.name}
+                        className="h-10 w-16 rounded-lg border border-[#cfeef7] object-cover bg-white"
+                      />
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-gray-900">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-black text-[#111]">
                       {cat.name}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <code className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                        /{cat.slug}
-                      </code>
+                    <td className="whitespace-nowrap px-6 py-4 text-xs font-bold text-[#aaa]">
+                      /{cat.slug}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <td className="whitespace-nowrap px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
                           onClick={() => handleEdit(cat)}
-                          className="text-gray-400 transition-colors hover:text-[#01C7FE]"
+                          className="text-[#aaa] transition hover:text-[#03c7fe]"
                           title="Edit Category"
                         >
-                          <Edit2 size={18} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(cat._id)}
-                          className="text-gray-400 transition-colors hover:text-red-600"
+                          className="text-[#aaa] transition hover:text-red-500"
                           title="Delete Category"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -365,77 +368,71 @@ export default function CategoriesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         {filteredCategories.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-500">
-              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-              {Math.min(currentPage * ITEMS_PER_PAGE, filteredCategories.length)} of {filteredCategories.length}
+          <div className="mt-6 flex items-center justify-between border-t border-[#e0f4fb] pt-4">
+            <p className="text-[10px] font-black text-[#aaa]">
+              Page {currentPage} of {totalPages}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               <button
-                type="button"
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-[#f2fbff] p-2 text-[#03c7fe] transition hover:bg-[#e0f4fb] disabled:opacity-50"
               >
                 <ArrowLeft size={16} />
-                Previous
               </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
               <button
-                type="button"
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-[#f2fbff] p-2 text-[#03c7fe] transition hover:bg-[#e0f4fb] disabled:opacity-50"
               >
-                Next
                 <ArrowRight size={16} />
               </button>
             </div>
           </div>
         )}
-      </main>
+      </Panel>
 
       {/* Modal Overlay for Add/Edit Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm sm:p-6">
-          <div className="flex w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#111]/20 p-4 backdrop-blur-sm">
+          <Panel className="flex w-full max-w-md flex-col overflow-hidden p-0">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-bold text-gray-900">
+            <div className="flex items-center justify-between border-b border-[#cfeef7] bg-[#fbfdff] px-6 py-5">
+              <h3 className="text-lg font-black text-[#111]">
                 {editingId ? "Edit Category" : "New Category"}
               </h3>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-[#f2fbff] hover:text-[#111]"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="flex flex-col">
+            <form onSubmit={handleSubmit} className="flex flex-col bg-white">
               <div className="flex flex-col gap-5 p-6">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Category Name</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Category Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Electronics"
                     required
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className="w-full rounded-2xl border border-[#cfeef7] bg-white px-4 py-3 text-sm font-bold text-[#111] outline-none transition-colors focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20"
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Cover Image</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Cover Image</label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="group relative flex h-40 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-[#01C7FE] hover:bg-white"
+                    className="group relative flex h-40 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#cfeef7] bg-[#fbfdff] transition-colors hover:border-[#03c7fe]"
                   >
                     {preview ? (
                       <img
@@ -444,9 +441,9 @@ export default function CategoriesPage() {
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#01C7FE]">
+                      <div className="flex flex-col items-center gap-1 text-[#aaa] group-hover:text-[#03c7fe]">
                         <ImagePlus size={32} />
-                        <span className="text-sm font-medium">Click to upload image</span>
+                        <span className="text-xs font-bold">Click to upload image</span>
                       </div>
                     )}
                     <input
@@ -461,26 +458,26 @@ export default function CategoriesPage() {
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[#cfeef7] bg-[#fbfdff] px-6 py-5">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                  className="rounded-2xl border border-[#cfeef7] bg-white px-5 py-3 text-xs font-black text-[#111] transition hover:bg-[#f2fbff]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl bg-[#03c7fe] px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(3,199,254,0.3)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? "Processing..." : editingId ? "Update Category" : "Create Category"}
                 </button>
               </div>
             </form>
-          </div>
+          </Panel>
         </div>
       )}
-    </div>
+    </main>
   );
 }

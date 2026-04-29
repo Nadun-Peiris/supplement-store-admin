@@ -23,7 +23,6 @@ import {
   CalendarRange,
   Download,
   FileText,
-  Loader2,
   MapPinned,
   Package,
   RefreshCw,
@@ -36,6 +35,7 @@ import {
   DateRangeValue,
   SingleCalendarRangePicker,
 } from "@/app/(admin)/dashboard/components/SingleCalendarRangePicker";
+import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -170,6 +170,14 @@ function formatDateLabel(value: string) {
   });
 }
 
+function formatDateInputValue(date: Date | null) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function buildTimelineData(orders: Order[], start: Date | null, end: Date | null) {
   if (!orders.length) return [];
   const useMonthly =
@@ -264,6 +272,15 @@ export default function ReportsPage() {
     const current = getRangeBounds(rangePreset, customRange);
     return { currentBounds: current, previousBounds: computePreviousBounds(current.start, current.end) };
   }, [customRange, rangePreset]);
+
+  const calendarRangeValue = useMemo<DateRangeValue>(() => {
+    if (rangePreset === "custom") return customRange;
+
+    return {
+      start: formatDateInputValue(currentBounds.start),
+      end: formatDateInputValue(currentBounds.end),
+    };
+  }, [currentBounds.end, currentBounds.start, customRange, rangePreset]);
 
   const filteredOrders = useMemo(() =>
     orders.filter((order) => {
@@ -427,16 +444,7 @@ export default function ReportsPage() {
 
   /* ── Loading state ── */
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f2fbff]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#03c7fe] shadow-[0_8px_20px_rgba(3,199,254,0.3)]">
-            <Loader2 size={28} className="animate-spin text-white" />
-          </div>
-          <p className="text-sm font-black text-[#111]">Loading reports…</p>
-        </div>
-      </main>
-    );
+    return <PageLoader icon={FileText} label="Loading Reports..." />;
   }
 
   /* ── Main render ── */
@@ -511,7 +519,7 @@ export default function ReportsPage() {
               <CalendarRange size={12} /> Date Window
             </p>
             <SingleCalendarRangePicker
-              value={customRange}
+              value={calendarRangeValue}
               onChange={(nextRange) => { setCustomRange(nextRange); setRangePreset("custom"); }}
               placeholder="Pick a custom range"
               ariaLabel="Choose a custom date range"

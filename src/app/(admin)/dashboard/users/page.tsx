@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Edit2, Trash2, X, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, X, CheckCircle2, AlertCircle, Info, Users } from "lucide-react";
+
+/* ─── Shared UI Component ────────────────────────────────────────── */
+function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-[28px] border border-white bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)] ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+const inputClass = "w-full rounded-2xl border border-[#cfeef7] bg-white px-4 py-3 text-sm font-bold text-[#111] outline-none transition-colors focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20 disabled:opacity-60 disabled:bg-gray-50";
 
 type UserRole = "customer" | "admin" | "superadmin";
 type UserGender = "Male" | "Female" | "Other";
@@ -119,7 +130,6 @@ export default function UsersPage() {
     country: "",
   });
 
-  // Custom UI States for Alerts/Confirms
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog>(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
@@ -361,122 +371,138 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <h2 className="text-lg font-semibold text-gray-500">Loading users...</h2>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-[#f2fbff]">
+        <div className="flex flex-col items-center gap-4">
+          <Users size={32} className="animate-pulse text-[#03c7fe]" />
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#888]">Loading Users...</h2>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 relative">
+    <main className="min-h-screen bg-[#f2fbff] px-4 py-8 md:px-8">
       {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg transition-all animate-in slide-in-from-right-8 ${
+            className={`pointer-events-auto flex items-center gap-3 rounded-2xl px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(0,0,0,0.1)] transition-all animate-in slide-in-from-right-8 ${
               toast.type === "success"
-                ? "bg-green-600"
+                ? "bg-emerald-500"
                 : toast.type === "error"
-                ? "bg-red-600"
-                : "bg-[#01C7FE]"
+                ? "bg-red-500"
+                : "bg-[#111]"
             }`}
           >
-            {toast.type === "success" && <CheckCircle2 size={18} />}
-            {toast.type === "error" && <AlertCircle size={18} />}
-            {toast.type === "info" && <Info size={18} />}
+            {toast.type === "success" && <CheckCircle2 size={16} />}
+            {toast.type === "error" && <AlertCircle size={16} />}
+            {toast.type === "info" && <Info size={16} />}
             {toast.message}
           </div>
         ))}
       </div>
 
-      {/* Page Header */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-            <p className="text-sm text-gray-500 sm:hidden">Manage your customers and admins.</p>
+      {/* Page Header Panel */}
+      <Panel className="mb-6 flex flex-col gap-6 p-7 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]">
+            <Users size={22} />
           </div>
-          <div className="relative w-full sm:w-80">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">User Management</p>
+            <h1 className="text-2xl font-black text-[#111]">Customers & Admins</h1>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa]" />
             <input
               type="text"
               placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:ring-1 focus:ring-[#01C7FE]"
+              className="w-full rounded-2xl border border-[#cfeef7] bg-white py-3 pl-10 pr-4 text-xs font-bold text-[#111] outline-none transition focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20"
             />
           </div>
+          <button
+            onClick={() => showToast("Users must register through the public site.", "info")}
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[#03c7fe] px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(3,199,254,0.3)] transition hover:scale-[1.02]"
+          >
+            <Plus size={14} /> Add User
+          </button>
         </div>
-        <button
-          onClick={() => showToast("Users must register through the public site.", "info")}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
-        >
-          <Plus size={18} />
-          Add User
-        </button>
-      </header>
+      </Panel>
 
-      {/* Data Table */}
-      <main className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      {/* Data Table Panel */}
+      <Panel className="p-6">
+        <div className="mb-4 flex items-center justify-between border-b border-[#e0f4fb] pb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#aaa]">
+            {filteredUsers.length} total users
+          </p>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[900px] border-collapse">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">User</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Subscription</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">User</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Role</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Subscription</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Status</th>
+                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
-                    No users found.
+                  <td colSpan={5} className="py-12 text-center text-sm font-bold text-[#aaa]">
+                    No users found matching your criteria.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user._id} className="transition-colors hover:bg-gray-50">
+                  <tr key={user._id} className="border-t border-[#e0f4fb] transition hover:bg-[#f2fbff]">
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#01C7FE]/10 text-sm font-bold text-[#01C7FE] ring-1 ring-inset ring-[#01C7FE]/20">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#03c7fe] text-xs font-black text-white shadow-[0_4px_10px_rgba(3,199,254,0.3)]">
                           {user.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-900">{user.fullName}</span>
-                          <span className="text-xs text-gray-500">{user.email}</span>
+                          <span className="text-sm font-black text-[#111]">{user.fullName}</span>
+                          <span className="text-[10px] font-bold text-[#aaa]">{user.email}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 capitalize">
-                      {user.role}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span className="inline-flex items-center rounded-full bg-[#fbfdff] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#111] ring-1 ring-inset ring-[#cfeef7]">
+                        {user.role}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       {user.subscription?.active ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/20">
                           {user.subscription.status === "active" ? "Active" : "Subscribed"}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                        <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#aaa] ring-1 ring-inset ring-gray-200">
                           Inactive
                         </span>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       {user.isBlocked ? (
-                        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                        <span className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-red-500 ring-1 ring-inset ring-red-500/20">
                           Blocked
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/20">
                           Active
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <td className="whitespace-nowrap px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         {canManageUser(user) ? (
                           <>
@@ -484,32 +510,32 @@ export default function UsersPage() {
                               type="button"
                               onClick={() => toggleUserStatus(user)}
                               disabled={statusLoadingId === user._id}
-                              className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                              className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                 user.isBlocked
-                                  ? "bg-green-50 text-green-700 hover:bg-green-100"
-                                  : "bg-red-50 text-red-700 hover:bg-red-100"
+                                  ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                                  : "bg-amber-50 text-amber-600 hover:bg-amber-100"
                               }`}
                             >
-                              {statusLoadingId === user._id ? "Updating..." : user.isBlocked ? "Enable" : "Disable"}
+                              {statusLoadingId === user._id ? "..." : user.isBlocked ? "Enable" : "Disable"}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleEditClick(user)}
                               disabled={isEditLoading}
-                              className="text-gray-400 transition-colors hover:text-[#01C7FE]"
+                              className="p-2 text-[#aaa] transition hover:text-[#03c7fe]"
                             >
-                              <Edit2 size={18} />
+                              <Edit2 size={16} />
                             </button>
                             <button
                               type="button"
                               onClick={() => deleteUser(user)}
-                              className="text-gray-400 transition-colors hover:text-red-600"
+                              className="p-2 text-[#aaa] transition hover:text-red-500"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           </>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-[10px] font-black text-[#aaa]">—</span>
                         )}
                       </div>
                     </td>
@@ -519,22 +545,22 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
-      </main>
+      </Panel>
 
       {/* Confirmation Modal Overlay */}
       {confirmDialog && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm sm:p-6">
-          <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#111]/20 p-4 backdrop-blur-sm">
+          <Panel className="flex w-full max-w-sm flex-col overflow-hidden p-0">
             <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900">{confirmDialog.title}</h3>
-              <p className="mt-2 text-sm text-gray-500">{confirmDialog.message}</p>
+              <h3 className="text-lg font-black text-[#111]">{confirmDialog.title}</h3>
+              <p className="mt-2 text-xs font-bold text-[#888]">{confirmDialog.message}</p>
             </div>
-            <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
+            <div className="flex items-center justify-end gap-3 border-t border-[#cfeef7] bg-[#fbfdff] px-6 py-5">
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
                 disabled={isConfirmLoading}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-2xl border border-[#cfeef7] bg-white px-5 py-3 text-xs font-black text-[#111] transition hover:bg-[#f2fbff] disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -542,245 +568,237 @@ export default function UsersPage() {
                 type="button"
                 onClick={executeConfirmAction}
                 disabled={isConfirmLoading}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  confirmDialog.isDanger ? "bg-red-600 hover:bg-red-700" : "bg-[#01C7FE] hover:bg-[#00b3e6]"
+                className={`rounded-2xl px-5 py-3 text-xs font-black text-white shadow-sm transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 ${
+                  confirmDialog.isDanger ? "bg-red-500 shadow-[0_10px_25px_rgba(239,68,68,0.3)]" : "bg-[#03c7fe] shadow-[0_10px_25px_rgba(3,199,254,0.3)]"
                 }`}
               >
                 {isConfirmLoading ? "Processing..." : confirmDialog.confirmText}
               </button>
             </div>
-          </div>
+          </Panel>
         </div>
       )}
 
       {/* Edit User Modal Overlay */}
       {isModalOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm sm:p-6">
-          <div className="flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-bold text-gray-900">Edit User</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111]/20 p-4 backdrop-blur-sm sm:p-6">
+          <Panel className="flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden p-0">
+            <div className="flex items-center justify-between border-b border-[#cfeef7] bg-[#fbfdff] px-6 py-5">
+              <h3 className="text-lg font-black text-[#111]">Edit User</h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-[#f2fbff] hover:text-[#111]"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="overflow-y-auto p-6">
+            <div className="overflow-y-auto p-6 bg-white">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Full Name</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Full Name</label>
                   <input
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Email</label>
                   <input
                     type="email"
                     value={formData.email}
                     disabled
-                    className="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 outline-none"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Phone</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Phone</label>
                   <input
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Age</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Age</label>
                   <input
                     type="number"
                     value={formData.age}
                     onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Gender</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Gender</label>
                   <select
                     value={formData.gender}
                     onChange={(e) =>
                       setFormData({ ...formData, gender: e.target.value as UserFormData["gender"] })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   >
                     <option value="">Select gender</option>
                     {GENDER_OPTIONS.map((gender) => (
-                      <option key={gender} value={gender}>
-                        {gender}
-                      </option>
+                      <option key={gender} value={gender}>{gender}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Height</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Height (cm)</label>
                   <input
                     type="number"
                     value={formData.height}
                     onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Weight</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Weight (kg)</label>
                   <input
                     type="number"
                     value={formData.weight}
                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">BMI</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">BMI</label>
                   <input
                     type="number"
                     value={formData.bmi}
                     onChange={(e) => setFormData({ ...formData, bmi: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Goal</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Goal</label>
                   <select
                     value={formData.goal}
                     onChange={(e) =>
                       setFormData({ ...formData, goal: e.target.value as UserFormData["goal"] })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   >
                     <option value="">Select your goal</option>
                     {GOAL_OPTIONS.map((goal) => (
-                      <option key={goal} value={goal}>
-                        {goal}
-                      </option>
+                      <option key={goal} value={goal}>{goal}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Activity</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Activity</label>
                   <select
                     value={formData.activity}
                     onChange={(e) =>
                       setFormData({ ...formData, activity: e.target.value as UserFormData["activity"] })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   >
                     <option value="">Select activity</option>
                     {ACTIVITY_OPTIONS.map((activity) => (
-                      <option key={activity} value={activity}>
-                        {activity}
-                      </option>
+                      <option key={activity} value={activity}>{activity}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Diet</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Diet</label>
                   <select
                     value={formData.diet}
                     onChange={(e) =>
                       setFormData({ ...formData, diet: e.target.value as UserFormData["diet"] })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   >
                     <option value="">Select diet</option>
                     {DIET_OPTIONS.map((diet) => (
-                      <option key={diet} value={diet}>
-                        {diet}
-                      </option>
+                      <option key={diet} value={diet}>{diet}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Conditions</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Conditions</label>
                   <input
                     type="text"
                     value={formData.conditions}
                     onChange={(e) => setFormData({ ...formData, conditions: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Sleep Hours</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Sleep Hours</label>
                   <input
                     type="number"
                     value={formData.sleepHours}
                     onChange={(e) => setFormData({ ...formData, sleepHours: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Water Intake</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Water Intake (L)</label>
                   <input
                     type="number"
                     value={formData.waterIntake}
                     onChange={(e) => setFormData({ ...formData, waterIntake: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5 md:col-span-2">
-                  <label className="text-sm font-medium text-gray-700">Address Line 1</label>
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Address Line 1</label>
                   <input
                     type="text"
                     value={formData.addressLine1}
                     onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5 md:col-span-2">
-                  <label className="text-sm font-medium text-gray-700">Address Line 2</label>
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Address Line 2</label>
                   <input
                     type="text"
                     value={formData.addressLine2}
                     onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">City</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">City</label>
                   <input
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700">Postal Code</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Postal Code</label>
                   <input
                     type="text"
                     value={formData.postalCode}
                     onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5 md:col-span-2">
-                  <label className="text-sm font-medium text-gray-700">Country</label>
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Country</label>
                   <input
                     type="text"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#01C7FE] focus:bg-white focus:ring-1 focus:ring-[#01C7FE]"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[#cfeef7] bg-[#fbfdff] px-6 py-5">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                className="rounded-2xl border border-[#cfeef7] bg-white px-5 py-3 text-xs font-black text-[#111] transition hover:bg-[#f2fbff]"
               >
                 Cancel
               </button>
@@ -788,14 +806,14 @@ export default function UsersPage() {
                 type="button"
                 onClick={handleSaveUser}
                 disabled={isEditLoading}
-                className="rounded-lg bg-[#01C7FE] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00b3e6]"
+                className="rounded-2xl bg-[#03c7fe] px-5 py-3 text-xs font-black text-white shadow-[0_10px_25px_rgba(3,199,254,0.3)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isEditLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
-          </div>
+          </Panel>
         </div>
       )}
-    </div>
+    </main>
   );
 }

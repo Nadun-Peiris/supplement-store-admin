@@ -140,6 +140,7 @@ export async function GET() {
         coa: p.coa || {},
         
         isActive: p.isActive,
+        createdAt: p.createdAt,
       })),
     });
   } catch (error) {
