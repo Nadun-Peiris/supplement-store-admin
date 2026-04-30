@@ -23,19 +23,17 @@ import {
   SingleCalendarRangePicker,
 } from "@/app/(admin)/dashboard/components/SingleCalendarRangePicker";
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  Pie,
-  PieChart,
+  Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Legend,
 } from "recharts";
 
 type OrderItem = {
@@ -351,8 +349,8 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderSummary | null>(null);
-  const [selectedRangePreset, setSelectedRangePreset] = useState<RangePreset>("7d");
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => getPresetDateRange("7d"));
+  const [selectedRangePreset, setSelectedRangePreset] = useState<RangePreset>("today");
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => getPresetDateRange("today"));
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -842,42 +840,33 @@ export default function OverviewPage() {
           />
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={overview.monthlyTrend} margin={{ top: 12, right: 12, left: -24, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="5%" stopColor="#03c7fe" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#03c7fe" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#cfeef7" strokeDasharray="3 3" />
+              <LineChart data={overview.monthlyTrend}>
+                <CartesianGrid stroke="#e0f4fb" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="label"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#888", fontWeight: 800 }}
-                  dy={10}
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis
                   yAxisId="left"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#888", fontWeight: 800 }}
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
                   tickFormatter={(value) => compactNumberFormatter.format(value)}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#888", fontWeight: 800 }}
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => compactNumberFormatter.format(value)}
                 />
                 <Tooltip
                   contentStyle={{
-                    borderRadius: "16px",
+                    borderRadius: 16,
                     border: "1px solid #cfeef7",
-                    boxShadow: "0 10px 25px rgba(3,199,254,0.12)",
+                    fontSize: 12,
+                    boxShadow: "0 8px 24px rgba(3,199,254,0.12)",
                   }}
-                  itemStyle={{ fontWeight: 900, fontSize: "12px" }}
                   formatter={(value: number, name: string) =>
                     name === "Revenue"
                       ? [currencyFormatter.format(value), name]
@@ -885,24 +874,25 @@ export default function OverviewPage() {
                   }
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area
+                <Bar
                   yAxisId="left"
+                  dataKey="orders"
+                  name="Orders"
+                  fill="#bae6fd"
+                  radius={[8, 8, 0, 0]}
+                  barSize={28}
+                />
+                <Line
+                  yAxisId="right"
                   type="monotone"
                   dataKey="revenue"
                   name="Revenue"
                   stroke="#03c7fe"
                   strokeWidth={3}
-                  fill="url(#revenueFill)"
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
                 />
-                <Bar
-                  yAxisId="right"
-                  dataKey="orders"
-                  name="Orders"
-                  fill="#111"
-                  radius={[8, 8, 0, 0]}
-                  barSize={28}
-                />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </Panel>
@@ -915,28 +905,24 @@ export default function OverviewPage() {
           />
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={overview.fulfillmentCounts}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={58}
-                  outerRadius={92}
-                  paddingAngle={2}
-                >
+              <BarChart data={overview.fulfillmentCounts}>
+                <CartesianGrid stroke="#e0f4fb" strokeDasharray="3 3" />
+                <XAxis dataKey="name" stroke="#aaa" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#aaa" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #cfeef7",
+                    fontSize: 12,
+                    boxShadow: "0 8px 24px rgba(3,199,254,0.12)",
+                  }}
+                />
+                <Bar dataKey="value" radius={[10, 10, 0, 0]}>
                   {overview.fulfillmentCounts.map((entry, index) => (
                     <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
                   ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "1px solid #cfeef7",
-                    boxShadow: "0 10px 25px rgba(3,199,254,0.12)",
-                  }}
-                  itemStyle={{ fontWeight: 900, fontSize: "12px" }}
-                />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-3">
@@ -973,28 +959,26 @@ export default function OverviewPage() {
                 layout="vertical"
                 margin={{ top: 0, right: 12, left: 12, bottom: 0 }}
               >
-                <CartesianGrid horizontal={false} stroke="#cfeef7" strokeDasharray="3 3" />
+                <CartesianGrid horizontal={false} stroke="#e0f4fb" strokeDasharray="3 3" />
                 <XAxis
                   type="number"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#888", fontWeight: 800 }}
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis
                   dataKey="name"
                   type="category"
                   width={120}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: "#111", fontWeight: 900 }}
+                  stroke="#aaa"
+                  tick={{ fontSize: 10 }}
                 />
                 <Tooltip
                   contentStyle={{
-                    borderRadius: "16px",
+                    borderRadius: 16,
                     border: "1px solid #cfeef7",
-                    boxShadow: "0 10px 25px rgba(3,199,254,0.12)",
+                    fontSize: 12,
+                    boxShadow: "0 8px 24px rgba(3,199,254,0.12)",
                   }}
-                  itemStyle={{ fontWeight: 900, fontSize: "12px" }}
                   formatter={(value: number, name: string, entry) => {
                     const payload = entry.payload as { revenue: number };
                     if (name === "quantity") {

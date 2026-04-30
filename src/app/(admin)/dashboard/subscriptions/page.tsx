@@ -56,8 +56,8 @@ export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("active");
-  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("all");
-  const [dateRange, setDateRange] = useState<DateRangeValue>({ start: "", end: "" });
+  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("today");
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => getPresetDateRange("today"));
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);

@@ -93,6 +93,11 @@ const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
 
 const PIE_COLORS = ["#03c7fe", "#0ea5e9", "#38bdf8", "#7dd3fc", "#bae6fd"];
 
+const compactNumberFormatter = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 /* ─── Helpers ────────────────────────────────────────────────────── */
 
 function formatCurrency(value: number) {
@@ -242,7 +247,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [rangePreset, setRangePreset] = useState<RangePreset>("month");
+  const [rangePreset, setRangePreset] = useState<RangePreset>("today");
   const [customRange, setCustomRange] = useState<DateRangeValue>({ start: "", end: "" });
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderTypeFilter>("all");
 
@@ -602,15 +607,26 @@ export default function ReportsPage() {
               <LineChart data={timelineData}>
                 <CartesianGrid stroke="#e0f4fb" strokeDasharray="3 3" />
                 <XAxis dataKey="label" stroke="#aaa" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="left" stroke="#aaa" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#aaa" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <YAxis
+                  yAxisId="left"
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => compactNumberFormatter.format(value)}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#aaa"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => compactNumberFormatter.format(value)}
+                />
                 <Tooltip
                   contentStyle={{ borderRadius: 16, border: "1px solid #cfeef7", fontSize: 12, boxShadow: "0 8px 24px rgba(3,199,254,0.12)" }}
-                  formatter={(value: number, name: string) => name === "revenue" ? formatCurrency(value) : value.toLocaleString()}
+                  formatter={(value: number, name: string) => name === "Revenue" ? formatCurrency(value) : value.toLocaleString()}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar yAxisId="left" dataKey="orders" name="orders" fill="#bae6fd" radius={[8, 8, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="revenue" name="revenue" stroke="#03c7fe" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#bae6fd" radius={[8, 8, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" name="Revenue" stroke="#03c7fe" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -625,7 +641,14 @@ export default function ReportsPage() {
                 <CartesianGrid stroke="#e0f4fb" strokeDasharray="3 3" />
                 <XAxis dataKey="name" stroke="#aaa" tick={{ fontSize: 11 }} />
                 <YAxis stroke="#aaa" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: 16, border: "1px solid #cfeef7", fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #cfeef7",
+                    fontSize: 12,
+                    boxShadow: "0 8px 24px rgba(3,199,254,0.12)",
+                  }}
+                />
                 <Bar dataKey="value" radius={[10, 10, 0, 0]}>
                   {fulfillmentData.map((_, index) => (
                     <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -647,7 +670,14 @@ export default function ReportsPage() {
                     <Cell key={`${entry.name}-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 16, border: "1px solid #cfeef7", fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #cfeef7",
+                    fontSize: 12,
+                    boxShadow: "0 8px 24px rgba(3,199,254,0.12)",
+                  }}
+                />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
