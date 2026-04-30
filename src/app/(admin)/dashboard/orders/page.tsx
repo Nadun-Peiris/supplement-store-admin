@@ -73,8 +73,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("today");
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => getPresetDateRange("today"));
+  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("all");
+  const [dateRange, setDateRange] = useState<DateRangeValue>({ start: "", end: "" });
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [orderTypeTab, setOrderTypeTab] = useState<OrderTypeTab>("all");
   const [loading, setLoading] = useState(true);
