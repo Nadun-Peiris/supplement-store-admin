@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongoose";
 import Product, { type ProductDocument } from "@/models/Product";
 import slugify from "slugify";
 import type { Types } from "mongoose";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 const slugOptions = { lower: true, strict: true, trim: true };
 type ProductListItem = ProductDocument & { _id: Types.ObjectId };
@@ -102,8 +103,11 @@ const buildCoa = (coa?: ProductInput["coa"]) => ({
   verified: coa?.verified ?? false,
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const products = await Product.find()
@@ -154,6 +158,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const body = (await req.json()) as ProductInput;

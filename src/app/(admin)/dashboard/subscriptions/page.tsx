@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import { Mail, MapPin, RefreshCw, Repeat, Search, ShoppingBag, User as UserIcon, X } from "lucide-react";
 import { DateRangeValue, SingleCalendarRangePicker } from "@/app/(admin)/dashboard/components/SingleCalendarRangePicker";
 import {
@@ -74,7 +75,7 @@ export default function SubscriptionsPage() {
     }
 
     try {
-      const res = await fetch("/api/subscriptions");
+      const res = await adminFetch("/api/subscriptions");
       const data = await res.json();
       setSubscriptions(data.subscriptions || []);
     } catch (err) {
@@ -181,7 +182,7 @@ export default function SubscriptionsPage() {
 
   const markSubscriptionAsViewed = useCallback(async (subscriptionId: string) => {
     try {
-      const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
+      const res = await adminFetch(`/api/subscriptions/${subscriptionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adminViewed: true }),
@@ -219,7 +220,7 @@ export default function SubscriptionsPage() {
   const cancelSubscription = async (subscriptionId: string) => {
     setCancellingId(subscriptionId);
     try {
-      const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
+      const res = await adminFetch(`/api/subscriptions/${subscriptionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "cancelled" }),
@@ -251,7 +252,7 @@ export default function SubscriptionsPage() {
     setReminderError(null);
 
     try {
-      const res = await fetch("/api/subscriptions/reminders", {
+      const res = await adminFetch("/api/subscriptions/reminders", {
         method: "POST",
       });
 

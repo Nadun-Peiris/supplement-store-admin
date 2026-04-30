@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import { Search, Plus, Trash2, X, UserCog, ShieldCheck } from "lucide-react";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
@@ -29,27 +30,10 @@ export default function ManageAdminsPage() {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
-  const getToken = () =>
-    document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("firebaseToken="))
-      ?.split("=")[1];
-
   // 🔹 Fetch admins from MongoDB
   const fetchAdmins = useCallback(async () => {
     try {
-      const token = getToken();
-      if (!token) {
-        setMessage("⚠️ Unauthorized. Please log in again.");
-        return;
-      }
-
-      const res = await fetch("/api/admin/set-role", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await adminFetch("/api/admin/set-role", { method: "GET" });
 
       const data = await res.json();
 
@@ -107,17 +91,10 @@ export default function ManageAdminsPage() {
     setMessage("");
 
     try {
-      const token = getToken();
-      if (!token) {
-        setMessage("⚠️ Unauthorized. Please log in again.");
-        return;
-      }
-
-      const res = await fetch("/api/admin/set-role", {
+      const res = await adminFetch("/api/admin/set-role", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ email: targetEmail, makeAdmin }),
       });

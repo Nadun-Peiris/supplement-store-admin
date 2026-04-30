@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
-import { verifyToken } from "@/utils/verifyToken";
 import { adminAuth } from "@/lib/firebaseAdmin";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -86,37 +86,12 @@ const toPublicUser = (u: LeanUserDoc) => ({
   updatedAt: u.updatedAt,
 });
 
-const getCurrentUser = async (req: Request) => {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-
-  if (!token) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  let decoded;
-  try {
-    decoded = await verifyToken(token);
-  } catch {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const currentUser = await User.findOne({ firebaseId: decoded.uid });
-
-  if (!currentUser || currentUser.role !== "superadmin") {
-    return {
-      error: NextResponse.json({ error: "Only superadmin can manage users" }, { status: 403 }),
-    };
-  }
-
-  return { currentUser };
-};
-
 export async function GET(req: Request, { params }: Params) {
   try {
-    await connectDB();
+    const guard = await verifyAdmin(req, { requireSuperadmin: true });
+    if ("error" in guard) return guard.error;
 
-    const guard = await getCurrentUser(req);
-    if (guard.error) return guard.error;
+    await connectDB();
 
     const { id } = await params;
     const user = await User.findById(id).lean();
@@ -134,12 +109,12 @@ export async function GET(req: Request, { params }: Params) {
 
 export async function PUT(req: Request, { params }: Params) {
   try {
+    const guard = await verifyAdmin(req, { requireSuperadmin: true });
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
-    const guard = await getCurrentUser(req);
-    if (guard.error) return guard.error;
-
-    const { currentUser } = guard;
+    const currentUser = guard.user;
     const { id } = await params;
     const body = await req.json();
 
@@ -166,6 +141,7 @@ export async function PUT(req: Request, { params }: Params) {
 
     const setData: Record<string, unknown> = {};
     const unsetData: Record<string, ""> = {};
+    const firebaseUpdates: Parameters<typeof adminAuth.updateUser>[1] = {};
 
     const assignRequiredString = (field: string) => {
       if (body[field] === undefined) return;
@@ -244,7 +220,24 @@ export async function PUT(req: Request, { params }: Params) {
     };
 
     assignRequiredString("fullName");
-    assignRequiredString("email");
+    if (body.email !== undefined) {
+      if (!isNonEmptyString(body.email)) {
+        throw new Error("email must be a non-empty string");
+      }
+      const normalizedEmail = body.email.trim().toLowerCase();
+      setData.email = normalizedEmail;
+
+      if (normalizedEmail !== targetUser.email) {
+        if (!targetUser.firebaseId) {
+          return NextResponse.json(
+            { error: "Cannot sync user email without Firebase ID" },
+            { status: 400 }
+          );
+        }
+
+        firebaseUpdates.email = normalizedEmail;
+      }
+    }
     assignRequiredString("phone");
     assignRequiredEnum("gender", GENDER_OPTIONS);
     assignRequiredString("addressLine1");
@@ -275,9 +268,11 @@ export async function PUT(req: Request, { params }: Params) {
         );
       }
 
-      await adminAuth.updateUser(targetUser.firebaseId, {
-        disabled: body.isBlocked,
-      });
+      firebaseUpdates.disabled = body.isBlocked;
+    }
+
+    if (targetUser.firebaseId && Object.keys(firebaseUpdates).length > 0) {
+      await adminAuth.updateUser(targetUser.firebaseId, firebaseUpdates);
     }
 
     if (Object.keys(setData).length === 0 && Object.keys(unsetData).length === 0) {
@@ -297,18 +292,23 @@ export async function PUT(req: Request, { params }: Params) {
   } catch (error) {
     console.error("UPDATE USER ERROR:", error);
     const message = error instanceof Error ? error.message : "Failed to update user";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      error instanceof Error &&
+      /(must be|is required|Invalid |No valid fields provided)/i.test(error.message)
+        ? 400
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function DELETE(req: Request, { params }: Params) {
   try {
+    const guard = await verifyAdmin(req, { requireSuperadmin: true });
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
-    const guard = await getCurrentUser(req);
-    if (guard.error) return guard.error;
-
-    const { currentUser } = guard;
+    const currentUser = guard.user;
     const { id } = await params;
 
     const targetUser = await User.findById(id);
@@ -326,6 +326,24 @@ export async function DELETE(req: Request, { params }: Params) {
         { error: "You cannot delete your own account" },
         { status: 403 }
       );
+    }
+
+    if (targetUser.firebaseId) {
+      try {
+        await adminAuth.deleteUser(targetUser.firebaseId);
+      } catch (error) {
+        const errorCode =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          typeof error.code === "string"
+            ? error.code
+            : "";
+
+        if (errorCode !== "auth/user-not-found") {
+          throw error;
+        }
+      }
     }
 
     const deleted = await User.findByIdAndDelete(id);

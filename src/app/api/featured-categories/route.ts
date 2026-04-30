@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import FeaturedCategory from "@/models/FeaturedCategory";
 import "@/models/Category"; // ensure Category schema is registered for populate
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 type PopulatedFeaturedCategory = {
   _id: string | { toString(): string };
@@ -42,8 +43,11 @@ const buildImageUrl = (raw?: string | null) => {
   return `/${trimmed}`;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const items = (await FeaturedCategory.find()
@@ -52,7 +56,8 @@ export async function GET() {
       .populate("categoryId")
       .lean()) as PopulatedFeaturedCategory[];
 
-    const cleaned = items.map((item) => {
+    const cleaned = items
+      .map((item) => {
       const categoryDoc =
         typeof item.categoryId === "object" && item.categoryId !== null
           ? item.categoryId
@@ -71,7 +76,8 @@ export async function GET() {
           image: buildImageUrl(categoryDoc?.image),
         },
       };
-    });
+      })
+      .filter((item) => item.categoryId);
 
     return NextResponse.json({ items: cleaned });
   } catch (err) {

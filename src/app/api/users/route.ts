@@ -1,32 +1,18 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
-import { verifyToken } from "@/utils/verifyToken";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 export async function GET(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
-    const token = req.headers
-      .get("authorization")
-      ?.replace("Bearer ", "");
+    const currentUser = guard.user;
 
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    let decoded;
-    try {
-      decoded = await verifyToken(token);
-    } catch {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await User.findOne({
-      firebaseId: decoded.uid,
-    });
-
-    if (!currentUser || currentUser.role === "customer") {
+    if (currentUser.role === "customer") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

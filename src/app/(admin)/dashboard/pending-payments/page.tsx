@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import {
   AlertCircle,
   ArrowRight,
@@ -162,7 +163,7 @@ export default function PendingPaymentsPage() {
 
     try {
       setError(null);
-      const response = await fetch("/api/orders?type=all");
+      const response = await adminFetch("/api/orders?type=all&paymentScope=pending");
       const payload = await response.json();
 
       if (!response.ok) {

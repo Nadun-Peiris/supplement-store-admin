@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import FeaturedCategory from "@/models/FeaturedCategory";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 export async function POST(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { categoryId } = await req.json();

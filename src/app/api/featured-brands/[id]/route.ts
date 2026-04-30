@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongoose";
 import FeaturedBrand from "@/models/FeaturedBrand";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 type ParamsPromise = { params: Promise<{ id: string }> };
 
 export async function PUT(req: Request, { params }: ParamsPromise) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { id } = await params;
@@ -63,6 +67,9 @@ export async function PUT(req: Request, { params }: ParamsPromise) {
 
 export async function DELETE(req: Request, { params }: ParamsPromise) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { id } = await params;

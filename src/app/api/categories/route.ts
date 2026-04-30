@@ -2,22 +2,45 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import Category from "@/models/Category";
 import slugify from "slugify";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
-export async function GET() {
+const slugOptions = {
+  lower: true,
+  strict: true,
+  trim: true,
+};
+
+const normalizeCategoryName = (value: unknown) =>
+  typeof value === "string" ? value.trim() : "";
+
+type CategoryListItem = {
+  _id: { toString(): string };
+  name?: string;
+  title?: string;
+  slug?: string;
+  image?: string;
+};
+
+export async function GET(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
-    const categories = await Category.find()
-      .sort({ name: 1 })
-      .lean();
+    const categories = (await Category.find().lean()) as CategoryListItem[];
+
+    const normalizedCategories = categories
+      .map((cat) => ({
+        _id: cat._id.toString(),
+        name: cat.name || cat.title || "",
+        slug: cat.slug || "",
+        image: cat.image || "",
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
 
     return NextResponse.json({
-      categories: categories.map((cat: any) => ({
-        _id: cat._id.toString(),
-        name: cat.name,
-        slug: cat.slug,
-        image: cat.image,
-      })),
+      categories: normalizedCategories,
     });
   } catch (error) {
     console.error("GET CATEGORIES ERROR:", error);
@@ -30,44 +53,47 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { name, image } = await req.json();
+    const normalizedName = normalizeCategoryName(name);
 
-    if (!name || !image) {
+    if (!normalizedName || !image) {
       return NextResponse.json(
         { error: "Name and image required" },
         { status: 400 }
       );
     }
 
-    // 🔥 Generate slug manually
-    let slug = slugify(name, {
-      lower: true,
-      strict: true,
-    });
+    const baseSlug = slugify(normalizedName, slugOptions);
+    let slug = baseSlug;
 
-    // 🔥 Ensure slug uniqueness
     let existing = await Category.findOne({ slug });
     let counter = 1;
 
     while (existing) {
-      slug = `${slug}-${counter}`;
+      slug = `${baseSlug}-${counter}`;
       existing = await Category.findOne({ slug });
       counter++;
     }
 
     const category = await Category.create({
-      name,
+      name: normalizedName,
+      title: normalizedName,
       slug,
       image,
     });
 
     return NextResponse.json(category, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CREATE CATEGORY ERROR:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to create category";
     return NextResponse.json(
-      { error: error.message || "Failed to create category" },
+      { error: message },
       { status: 500 }
     );
   }

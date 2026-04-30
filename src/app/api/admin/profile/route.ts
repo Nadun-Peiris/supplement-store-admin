@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
-import { verifyToken } from "@/utils/verifyToken";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"] as const;
 const GOAL_OPTIONS = ["Weight Loss", "Muscle Gain", "Maintenance", "Body Transformation"] as const;
@@ -79,43 +78,10 @@ const normalizeUser = (user: {
   updatedAt: user.updatedAt ?? null,
 });
 
-async function getCurrentAdmin(req: Request) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-
-  if (!token) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  let decoded;
-  try {
-    decoded = await verifyToken(token);
-  } catch {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const user = await User.findOne({ firebaseId: decoded.uid });
-
-  if (!user) {
-    return { error: NextResponse.json({ error: "User not found" }, { status: 404 }) };
-  }
-
-  if (user.isBlocked) {
-    return { error: NextResponse.json({ error: "User is blocked" }, { status: 403 }) };
-  }
-
-  if (user.role !== "admin" && user.role !== "superadmin") {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-
-  return { user };
-}
-
 export async function GET(req: Request) {
   try {
-    await connectDB();
-
-    const guard = await getCurrentAdmin(req);
-    if (guard.error) return guard.error;
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
 
     return NextResponse.json({ user: normalizeUser(guard.user.toObject()) });
   } catch (error) {
@@ -129,10 +95,8 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    await connectDB();
-
-    const guard = await getCurrentAdmin(req);
-    if (guard.error) return guard.error;
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
 
     const body = await req.json();
     const setData: Record<string, unknown> = {};
@@ -274,6 +238,11 @@ export async function PUT(req: Request) {
   } catch (error) {
     console.error("UPDATE ADMIN PROFILE ERROR:", error);
     const message = error instanceof Error ? error.message : "Failed to update profile";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      error instanceof Error &&
+      /(must be|is required|Invalid |No valid fields provided)/i.test(error.message)
+        ? 400
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

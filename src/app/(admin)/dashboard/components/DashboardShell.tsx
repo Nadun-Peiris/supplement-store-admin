@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { adminFetch, getAdminToken } from "@/lib/adminClient";
 import { auth } from "@/lib/firebase";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 import {
@@ -134,12 +135,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       setIsSearching(true);
 
       try {
-        const token = await currentUser.getIdToken();
-        const res = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await adminFetch(`/api/admin/search?q=${encodeURIComponent(query)}`);
 
         if (!res.ok) {
           throw new Error(`Search failed with status ${res.status}`);
@@ -185,8 +181,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       }
 
       try {
-        const token = await firebaseUser.getIdToken();
-        document.cookie = `firebaseToken=${token}; path=/; max-age=3600; Secure; SameSite=Strict`;
+        const token = await getAdminToken();
         const res = await fetch("/api/auth/validate-role", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
@@ -198,6 +193,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         }
 
         const data = await res.json();
+        await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (data.role === "admin" || data.role === "superadmin") {
           setRole(data.role);
         } else {
@@ -229,21 +228,26 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
     const loadSidebarCounts = async () => {
       try {
-        const [ordersRes, subscriptionsRes] = await Promise.all([
-          fetch("/api/orders?type=all"),
-          fetch("/api/subscriptions"),
+        const [ordersRes, pendingOrdersRes, subscriptionsRes] = await Promise.all([
+          adminFetch("/api/orders?type=all"),
+          adminFetch("/api/orders?type=all&paymentScope=pending"),
+          adminFetch("/api/subscriptions"),
         ]);
 
-        if (!ordersRes.ok || !subscriptionsRes.ok) {
+        if (!ordersRes.ok || !pendingOrdersRes.ok || !subscriptionsRes.ok) {
           throw new Error("Failed to load sidebar counts.");
         }
 
-        const [ordersPayload, subscriptionsPayload] = await Promise.all([
+        const [ordersPayload, pendingOrdersPayload, subscriptionsPayload] = await Promise.all([
           ordersRes.json(),
+          pendingOrdersRes.json(),
           subscriptionsRes.json(),
         ]);
 
         const orders: SidebarOrder[] = Array.isArray(ordersPayload.orders) ? ordersPayload.orders : [];
+        const pendingOrders: SidebarOrder[] = Array.isArray(pendingOrdersPayload.orders)
+          ? pendingOrdersPayload.orders
+          : [];
         const subscriptions: SidebarSubscription[] = Array.isArray(subscriptionsPayload.subscriptions)
           ? subscriptionsPayload.subscriptions
           : [];
@@ -251,8 +255,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           typeof window === "undefined"
             ? ""
             : window.localStorage.getItem(PENDING_PAYMENTS_VIEWED_AT_KEY) || "";
-        const firstPendingPaymentCreatedAtMs = orders
-          .filter((order) => (order.paymentStatus || "pending").toLowerCase() === "pending")
+        const firstPendingPaymentCreatedAtMs = pendingOrders
           .reduce<number | null>((earliest, order) => {
             const createdAtMs = new Date(order.createdAt || 0).getTime();
 
@@ -291,10 +294,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               (order) =>
                 (order.fulfillmentStatus || "unfulfilled").toLowerCase() === "unfulfilled"
             ).length,
-            pendingPayments: orders.filter((order) => {
+            pendingPayments: pendingOrders.filter((order) => {
               const createdAtMs = new Date(order.createdAt || 0).getTime();
               return (
-                (order.paymentStatus || "pending").toLowerCase() === "pending" &&
                 createdAtMs > pendingPaymentsViewedAtMs
               );
             }).length,
@@ -315,9 +317,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   const handleLogout = async () => {
     try {
+      await fetch("/api/auth/session", {
+        method: "DELETE",
+      });
       await signOut(auth);
     } finally {
-      document.cookie = "firebaseToken=; path=/; max-age=0; Secure; SameSite=Strict";
       router.push("/login");
     }
   };

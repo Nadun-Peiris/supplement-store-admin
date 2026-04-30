@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import Product from "@/models/Product";
 import slugify from "slugify";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 const slugOptions = { lower: true, strict: true, trim: true };
 const toSlug = (value: string) => slugify(value, slugOptions);
@@ -107,6 +108,9 @@ type Params = {
 
 export async function PUT(req: Request, { params }: Params) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { id } = await params;
@@ -216,6 +220,9 @@ export async function PUT(req: Request, { params }: Params) {
 
 export async function DELETE(req: Request, { params }: Params) {
   try {
+    const guard = await verifyAdmin(req);
+    if ("error" in guard) return guard.error;
+
     await connectDB();
 
     const { id } = await params;

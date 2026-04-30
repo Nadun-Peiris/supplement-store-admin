@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
+import { adminFetch } from "@/lib/adminClient";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
 import { ArrowLeft, ArrowRight, ImagePlus, Edit2, Trash2, Plus, Search, X, Tag, Star } from "lucide-react";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
@@ -44,7 +45,7 @@ export default function BrandsPage() {
 
   const fetchBrands = async () => {
     try {
-      const res = await fetch("/api/brands");
+      const res = await adminFetch("/api/brands");
       const data = await res.json();
       const nextBrands = data.brands || [];
       setBrands(nextBrands);
@@ -121,7 +122,7 @@ export default function BrandsPage() {
       const url = editingId ? `/api/brands/${editingId}` : "/api/brands";
       const method = editingId ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -145,7 +146,7 @@ export default function BrandsPage() {
     try {
       const responses = await Promise.all(
         ids.map((id) =>
-          fetch(`/api/brands/${id}`, {
+          adminFetch(`/api/brands/${id}`, {
             method: "DELETE",
           })
         )

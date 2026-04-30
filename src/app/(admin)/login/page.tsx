@@ -56,7 +56,17 @@ export default function AdminLoginPage() {
         return;
       }
 
-      document.cookie = `firebaseToken=${token}; path=/; max-age=3600; Secure; SameSite=Strict`;
+      const sessionResponse = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!sessionResponse.ok) {
+        await signOut(auth);
+        toast.error("Failed to start admin session.");
+        return;
+      }
+
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {

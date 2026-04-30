@@ -1,11 +1,33 @@
 import * as admin from "firebase-admin";
 
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
+function getFirebaseServiceAccount(): admin.ServiceAccount {
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  if (serviceAccountJson) {
+    return JSON.parse(serviceAccountJson) as admin.ServiceAccount;
+  }
+
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  if (!privateKey || !clientEmail || !projectId) {
+    throw new Error("Missing Firebase Admin credentials.");
+  }
+
+  return {
+    projectId,
+    clientEmail,
+    privateKey,
+  };
 }
 
-export const adminAuth = admin.auth();
+const adminApp =
+  admin.apps[0] ||
+  admin.initializeApp({
+    credential: admin.credential.cert(getFirebaseServiceAccount()),
+  });
+
+export const adminAuth = adminApp.auth();
+
+export default adminApp;

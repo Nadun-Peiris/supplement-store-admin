@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
+import { adminFetch } from "@/lib/adminClient";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
 import { ArrowLeft, ArrowRight, ImagePlus, Edit2, Trash2, Plus, Search, X, Layers, Star } from "lucide-react";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
@@ -44,7 +45,7 @@ export default function CategoriesPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("/api/categories");
+      const res = await adminFetch("/api/categories");
       const data = await res.json();
       const nextCategories = data.categories || [];
       setCategories(nextCategories);
@@ -123,7 +124,7 @@ export default function CategoriesPage() {
       const url = editingId ? `/api/categories/${editingId}` : "/api/categories";
       const method = editingId ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -145,7 +146,7 @@ export default function CategoriesPage() {
     setDeleteLoading(true);
     try {
       const responses = await Promise.all(
-        ids.map((id) => fetch(`/api/categories/${id}`, { method: "DELETE" }))
+        ids.map((id) => adminFetch(`/api/categories/${id}`, { method: "DELETE" }))
       );
 
       if (responses.some((res) => !res.ok)) {

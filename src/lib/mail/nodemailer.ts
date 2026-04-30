@@ -30,7 +30,7 @@ export async function sendEmail({
     const transporter = getTransporter();
 
     await transporter.sendMail({
-      from: `"Admin Panel" <${process.env.EMAIL_USER}>`,
+      from: `"Supplement Lanka" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,

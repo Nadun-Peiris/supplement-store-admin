@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -193,12 +194,6 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("en", {
 
 const pieColors = ["#03c7fe", "#0ea5e9", "#38bdf8", "#7dd3fc", "#bae6fd"];
 
-const getToken = () =>
-  document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("firebaseToken="))
-    ?.split("=")[1];
-
 const getCustomerName = (billing?: BillingDetails) => {
   const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim();
   return fullName || "Unknown customer";
@@ -354,24 +349,16 @@ export default function OverviewPage() {
 
   useEffect(() => {
     const loadDashboard = async () => {
-      const token = getToken();
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        const headers = { Authorization: `Bearer ${token}` };
         const [ordersRes, usersRes, productsRes, subscriptionsRes] =
           await Promise.all([
-            fetch("/api/orders?type=all"),
-            fetch("/api/users", { headers }),
-            fetch("/api/products"),
-            fetch("/api/subscriptions"),
+            adminFetch("/api/orders?type=all"),
+            adminFetch("/api/users"),
+            adminFetch("/api/products"),
+            adminFetch("/api/subscriptions"),
           ]);
 
         if (!ordersRes.ok || !usersRes.ok || !productsRes.ok || !subscriptionsRes.ok) {
@@ -395,6 +382,14 @@ export default function OverviewPage() {
             : [],
         });
       } catch (loadError) {
+        if (
+          loadError instanceof Error &&
+          loadError.message === "Authentication required"
+        ) {
+          router.push("/login");
+          return;
+        }
+
         console.error(loadError);
         setError(
           loadError instanceof Error
@@ -454,9 +449,6 @@ export default function OverviewPage() {
     const paidOrders = orders.filter((order) => (order.paymentStatus || "").toLowerCase() === "paid");
     const totalRevenue = orders.reduce((sum, order) => sum + (order.total ?? 0), 0);
     const paidRevenue = paidOrders.reduce((sum, order) => sum + (order.total ?? 0), 0);
-    const pendingPaymentOrders = orders.filter(
-      (order) => (order.paymentStatus || "pending").toLowerCase() === "pending"
-    ).length;
     const completedOrders = orders.filter(
       (order) => (order.fulfillmentStatus || "").toLowerCase() === "completed"
     ).length;
@@ -600,7 +592,6 @@ export default function OverviewPage() {
       totalRevenue,
       paidRevenue,
       totalOrders: orders.length,
-      pendingPaymentOrders,
       completedOrders,
       totalCustomers: customers.length,
       totalAdmins: admins.length,
@@ -794,10 +785,10 @@ export default function OverviewPage() {
             icon: <ShoppingBag size={18} />,
           },
           {
-            title: "Pending Payments",
-            value: overview.pendingPaymentOrders.toLocaleString(),
-            hint: "Awaiting customer action",
-            icon: <CreditCard size={18} />,
+            title: "Blocked Users",
+            value: overview.blockedUsers.toLocaleString(),
+            hint: "Access restricted accounts",
+            icon: <ShieldCheck size={18} />,
           },
           {
             title: "Active Subscriptions",

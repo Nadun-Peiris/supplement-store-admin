@@ -1,3 +1,5 @@
+import { adminFetch } from "@/lib/adminClient";
+
 export async function uploadToCloudinary(file: File): Promise<string> {
   // Convert file to base64
   const base64 = await new Promise<string>((resolve, reject) => {
@@ -17,7 +19,7 @@ export async function uploadToCloudinary(file: File): Promise<string> {
   });
 
   // Send to your backend upload API
-  const res = await fetch("/api/upload", {
+  const res = await adminFetch("/api/upload", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

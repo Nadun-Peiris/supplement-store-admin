@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import {
   GripVertical,
   Trash2,
@@ -15,7 +16,9 @@ import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 import {
   DndContext,
+  type CollisionDetection,
   closestCenter,
+  pointerWithin,
   PointerSensor,
   KeyboardSensor,
   useSensor,
@@ -53,6 +56,22 @@ type Toast = {
   message: string;
   type: "success" | "error" | "info";
   id: number;
+};
+
+const reindexFeatured = (items: Featured[]) =>
+  items.map((item, index) => ({
+    ...item,
+    index,
+  }));
+
+const collisionDetectionStrategy: CollisionDetection = (args) => {
+  const pointerIntersections = pointerWithin(args);
+
+  if (pointerIntersections.length > 0) {
+    return pointerIntersections;
+  }
+
+  return closestCenter(args);
 };
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
@@ -165,14 +184,18 @@ export default function FeaturedCategoriesPage() {
   const fetchInitialData = async () => {
     try {
       const [catRes, featRes] = await Promise.all([
-        fetch("/api/categories"),
-        fetch("/api/featured-categories")
+        adminFetch("/api/categories"),
+        adminFetch("/api/featured-categories")
       ]);
       const catData = await catRes.json();
       const featData = await featRes.json();
       
       setCategories(catData.categories || []);
-      setFeatured((featData.items || []).sort((a: any, b: any) => a.index - b.index));
+      setFeatured(
+        reindexFeatured(
+          ((featData.items || []) as Featured[]).sort((a, b) => a.index - b.index)
+        )
+      );
     } catch (error) {
       console.error("Fetch error", error);
       showToast("Failed to load categories.", "error");
@@ -191,7 +214,7 @@ export default function FeaturedCategoriesPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/featured-categories/add", {
+      const res = await adminFetch("/api/featured-categories/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categoryId }),
@@ -208,9 +231,9 @@ export default function FeaturedCategoriesPage() {
 
   const handleRemove = async (id: string) => {
     try {
-      const res = await fetch(`/api/featured-categories/${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/featured-categories/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to remove");
-      setFeatured(prev => prev.filter(f => f._id !== id));
+      setFeatured((prev) => reindexFeatured(prev.filter((f) => f._id !== id)));
       showToast("Category removed from featured.", "info");
     } catch (error) {
       showToast("Failed to remove category.", "error");
@@ -224,21 +247,29 @@ export default function FeaturedCategoriesPage() {
 
     const oldIndex = featured.findIndex((f) => f._id === active.id);
     const newIndex = featured.findIndex((f) => f._id === over.id);
-    const newOrder = arrayMove(featured, oldIndex, newIndex);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const previousOrder = featured;
+    const newOrder = reindexFeatured(arrayMove(featured, oldIndex, newIndex));
     
     setFeatured(newOrder);
 
     try {
-      await Promise.all(newOrder.map((item, i) => 
-        fetch(`/api/featured-categories/${item._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ index: i }),
-        })
-      ));
+      const movedItem = newOrder[newIndex];
+      const res = await adminFetch(`/api/featured-categories/${movedItem._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: newIndex }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save order");
+      }
+
       showToast("Order updated successfully.", "success");
     } catch (error) {
-      console.error("Order save failed");
+      console.error("Order save failed", error);
+      setFeatured(previousOrder);
       showToast("Failed to save new order.", "error");
     }
   };
@@ -355,8 +386,9 @@ export default function FeaturedCategoriesPage() {
           </h2>
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={collisionDetectionStrategy}
             onDragStart={(e) => setActiveId(String(e.active.id))}
+            onDragCancel={() => setActiveId(null)}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={featured.map((f) => f._id)} strategy={verticalListSortingStrategy}>

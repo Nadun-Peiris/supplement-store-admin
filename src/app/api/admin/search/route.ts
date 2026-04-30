@@ -6,7 +6,7 @@ import Brand from "@/models/Brand";
 import Category from "@/models/Category";
 import Subscription from "@/models/Subscription";
 import User from "@/models/User";
-import { verifyToken } from "@/utils/verifyToken";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 type SearchResult = {
   id: string;
@@ -46,7 +46,8 @@ type SearchBrand = {
 
 type SearchCategory = {
   _id: { toString(): string } | string;
-  name: string;
+  name?: string;
+  title?: string;
 };
 
 type SearchUser = {
@@ -73,26 +74,13 @@ const escapeRegex = (value: string) =>
 
 export async function GET(req: Request) {
   try {
+    const guard = await verifyAdmin(req);
+
+    if ("error" in guard) {
+      return guard.error;
+    }
+
     await connectDB();
-
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    let decoded;
-    try {
-      decoded = await verifyToken(token);
-    } catch {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await User.findOne({ firebaseId: decoded.uid }).lean();
-
-    if (!currentUser || currentUser.role === "customer") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
     const { searchParams } = new URL(req.url);
     const rawQuery = searchParams.get("q")?.trim() || "";
@@ -102,7 +90,7 @@ export async function GET(req: Request) {
     }
 
     const query = new RegExp(escapeRegex(rawQuery), "i");
-    const isSuperadmin = currentUser.role === "superadmin";
+    const isSuperadmin = guard.user.role === "superadmin";
     const isObjectIdQuery = /^[a-f\d]{24}$/i.test(rawQuery);
     const orderConditions = [
       ...(isObjectIdQuery ? [{ _id: rawQuery }] : []),
@@ -124,6 +112,7 @@ export async function GET(req: Request) {
       admins,
     ] = await Promise.all([
       Order.find({
+        paymentStatus: { $ne: "pending" },
         $or: orderConditions,
       })
         .sort({ createdAt: -1 })
@@ -147,7 +136,7 @@ export async function GET(req: Request) {
         .limit(5)
         .lean(),
       Category.find({
-        $or: [{ name: query }, { slug: query }],
+        $or: [{ name: query }, { title: query }, { slug: query }],
       })
         .sort({ name: 1 })
         .limit(5)
@@ -212,7 +201,7 @@ export async function GET(req: Request) {
       ...(categories as SearchCategory[]).map((category) => ({
         id: category._id.toString(),
         type: "category" as const,
-        title: category.name,
+        title: category.name || category.title || "",
         subtitle: "Category",
         href: "/dashboard/categories",
       })),

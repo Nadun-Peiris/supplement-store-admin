@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import { ArrowLeft, ArrowRight, CheckSquare, Edit2, Plus, Search, Trash2, X, Minus, Package } from "lucide-react";
+import { ArrowLeft, ArrowRight, Edit2, Plus, Search, Trash2, X, Minus, Package } from "lucide-react";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
@@ -292,7 +293,7 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("/api/products");
+      const res = await adminFetch("/api/products");
       const data = (await res.json()) as { products?: Product[] };
       const nextProducts = data.products || [];
       setProducts(nextProducts);
@@ -306,7 +307,7 @@ export default function ProductsPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("/api/categories");
+      const res = await adminFetch("/api/categories");
       const data = (await res.json()) as { categories?: Category[] };
       setCategories(data.categories || []);
     } catch (error) {
@@ -316,7 +317,7 @@ export default function ProductsPage() {
 
   const fetchBrands = async () => {
     try {
-      const res = await fetch("/api/brands");
+      const res = await adminFetch("/api/brands");
       const data = (await res.json()) as { brands?: Brand[] };
       setBrands(data.brands || []);
     } catch (error) {
@@ -491,7 +492,7 @@ export default function ProductsPage() {
     setDeleteLoading(true);
     try {
       const responses = await Promise.all(
-        ids.map((id) => fetch(`/api/products/${id}`, { method: "DELETE" }))
+        ids.map((id) => adminFetch(`/api/products/${id}`, { method: "DELETE" }))
       );
       if (responses.some((res) => !res.ok)) throw new Error("Failed to delete some products");
       setSelectedProductIds((prev) => prev.filter((id) => !ids.includes(id)));
@@ -607,7 +608,7 @@ export default function ProductsPage() {
       const url = editingId ? `/api/products/${editingId}` : "/api/products";
       const method = editingId ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

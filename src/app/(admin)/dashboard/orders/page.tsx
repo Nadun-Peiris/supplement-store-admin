@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import {
   AlertCircle,
   CheckCircle2,
@@ -108,7 +109,7 @@ export default function OrdersPage() {
       }
 
       try {
-        const res = await fetch(`${API}/api/orders?type=all`);
+        const res = await adminFetch(`${API}/api/orders?type=all`);
         const data = await res.json();
         const fetchedOrders = Array.isArray(data) ? data : data.orders || [];
         setOrders(fetchedOrders);
@@ -195,7 +196,7 @@ export default function OrdersPage() {
     setUpdatingOrderId(orderId);
 
     try {
-      const res = await fetch(`${API}/api/orders/${orderId}`, {
+      const res = await adminFetch(`${API}/api/orders/${orderId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -291,6 +292,9 @@ export default function OrdersPage() {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   };
+
+  const hasWaybillNumber = (trackingNumber?: string | null) =>
+    typeof trackingNumber === "string" && trackingNumber.trim().length > 0;
 
   const tabs: StatusTab[] = ["unfulfilled", "fulfilled", "shipped", "completed", "all"];
 
@@ -523,7 +527,7 @@ export default function OrdersPage() {
 
         {/* Data Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse">
+          <table className="w-full min-w-[980px] border-collapse">
             <thead>
               <tr>
                 <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Order ID</th>
@@ -583,14 +587,24 @@ export default function OrdersPage() {
                       <td className="whitespace-nowrap px-6 py-4 text-xs font-bold text-[#888]">
                         {formatShippingMethod(order.shippingMethod)}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ring-1 ring-inset ${getStatusBadge(
-                            order.fulfillmentStatus
-                          )}`}
-                        >
-                          {order.fulfillmentStatus || "unfulfilled"}
-                        </span>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ring-1 ring-inset ${getStatusBadge(
+                              order.fulfillmentStatus
+                            )}`}
+                          >
+                            {order.fulfillmentStatus || "unfulfilled"}
+                          </span>
+                          {hasWaybillNumber(order.trackingNumber) && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#888]">
+                              Waybill:
+                              <span className="ml-1 text-[#111] normal-case">
+                                {order.trackingNumber}
+                              </span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right">
                         {step ? (
@@ -670,6 +684,17 @@ export default function OrdersPage() {
                   </p>
                 </div>
               </div>
+
+              {hasWaybillNumber(selectedOrder.trackingNumber) && (
+                <div className="mb-6 rounded-2xl border border-[#cfeef7] bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#aaa]">
+                    Waybill Number
+                  </p>
+                  <p className="mt-1 break-all text-sm font-black text-[#111]">
+                    {selectedOrder.trackingNumber}
+                  </p>
+                </div>
+              )}
 
               {/* Customer Info Card */}
               <div className="flex flex-col gap-4 rounded-2xl border border-[#cfeef7] bg-white p-5">

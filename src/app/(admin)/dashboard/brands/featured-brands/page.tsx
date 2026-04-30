@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import {
   GripVertical,
   Trash2,
@@ -14,7 +15,9 @@ import {
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 import {
   DndContext,
+  type CollisionDetection,
   closestCenter,
+  pointerWithin,
   PointerSensor,
   KeyboardSensor,
   useSensor,
@@ -49,6 +52,22 @@ type Toast = {
   message: string;
   type: "success" | "error" | "info";
   id: number;
+};
+
+const reindexFeatured = (items: Featured[]) =>
+  items.map((item, index) => ({
+    ...item,
+    index,
+  }));
+
+const collisionDetectionStrategy: CollisionDetection = (args) => {
+  const pointerIntersections = pointerWithin(args);
+
+  if (pointerIntersections.length > 0) {
+    return pointerIntersections;
+  }
+
+  return closestCenter(args);
 };
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
@@ -166,16 +185,18 @@ export default function FeaturedBrandsPage() {
   const fetchInitialData = async () => {
     try {
       const [brandRes, featRes] = await Promise.all([
-        fetch("/api/brands"),
-        fetch("/api/featured-brands"),
+        adminFetch("/api/brands"),
+        adminFetch("/api/featured-brands"),
       ]);
       const brandData = await brandRes.json();
       const featData = await featRes.json();
 
       setBrands(brandData.brands || []);
       setFeatured(
-        (featData.items || []).sort(
-          (a: Featured, b: Featured) => a.index - b.index
+        reindexFeatured(
+          ((featData.items || []) as Featured[]).sort(
+            (a, b) => a.index - b.index
+          )
         )
       );
     } catch (error) {
@@ -198,7 +219,7 @@ export default function FeaturedBrandsPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/featured-brands/add", {
+      const res = await adminFetch("/api/featured-brands/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brandId }),
@@ -215,11 +236,11 @@ export default function FeaturedBrandsPage() {
 
   const handleRemove = async (id: string) => {
     try {
-      const res = await fetch(`/api/featured-brands/${id}`, {
+      const res = await adminFetch(`/api/featured-brands/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to remove");
-      setFeatured((prev) => prev.filter((f) => f._id !== id));
+      setFeatured((prev) => reindexFeatured(prev.filter((f) => f._id !== id)));
       showToast("Brand removed from featured.", "info");
     } catch {
       showToast("Failed to remove brand.", "error");
@@ -233,23 +254,29 @@ export default function FeaturedBrandsPage() {
 
     const oldIndex = featured.findIndex((f) => f._id === active.id);
     const newIndex = featured.findIndex((f) => f._id === over.id);
-    const newOrder = arrayMove(featured, oldIndex, newIndex);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const previousOrder = featured;
+    const newOrder = reindexFeatured(arrayMove(featured, oldIndex, newIndex));
 
     setFeatured(newOrder);
 
     try {
-      await Promise.all(
-        newOrder.map((item, i) =>
-          fetch(`/api/featured-brands/${item._id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ index: i }),
-          })
-        )
-      );
+      const movedItem = newOrder[newIndex];
+      const res = await adminFetch(`/api/featured-brands/${movedItem._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: newIndex }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save order");
+      }
+
       showToast("Order updated successfully.", "success");
     } catch (error) {
       console.error("Order save failed", error);
+      setFeatured(previousOrder);
       showToast("Failed to save new order.", "error");
     }
   };
@@ -371,8 +398,9 @@ export default function FeaturedBrandsPage() {
           </h2>
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={collisionDetectionStrategy}
             onDragStart={(e) => setActiveId(String(e.active.id))}
+            onDragCancel={() => setActiveId(null)}
             onDragEnd={handleDragEnd}
           >
             <SortableContext

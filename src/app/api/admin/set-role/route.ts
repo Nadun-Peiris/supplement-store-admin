@@ -1,46 +1,15 @@
 import { NextResponse } from "next/server";
-import admin from "firebase-admin";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
-import { verifyToken } from "@/utils/verifyToken";
-
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
-
-const getBearerToken = (req: Request) =>
-  req.headers.get("authorization")?.replace("Bearer ", "");
-
-const ensureSuperadmin = async (req: Request) => {
-  const token = getBearerToken(req);
-  if (!token) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const decoded = await verifyToken(token);
-  const currentUser = await User.findOne({ firebaseId: decoded.uid }).lean();
-
-  if (!currentUser || currentUser.role !== "superadmin") {
-    return {
-      error: NextResponse.json(
-        { error: "Only superadmin can manage admins" },
-        { status: 403 }
-      ),
-    };
-  }
-
-  return { currentUser };
-};
+import { adminAuth } from "@/lib/firebaseAdmin";
+import { verifyAdmin } from "@/lib/server/verifyAdmin";
 
 export async function GET(req: Request) {
   try {
-    await connectDB();
+    const guard = await verifyAdmin(req, { requireSuperadmin: true });
+    if ("error" in guard) return guard.error;
 
-    const guard = await ensureSuperadmin(req);
-    if (guard.error) return guard.error;
+    await connectDB();
 
     const admins = await User.find({
       role: { $in: ["admin", "superadmin"] },
@@ -67,10 +36,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
+    const guard = await verifyAdmin(req, { requireSuperadmin: true });
+    if ("error" in guard) return guard.error;
 
-    const guard = await ensureSuperadmin(req);
-    if (guard.error) return guard.error;
+    await connectDB();
 
     const { email, makeAdmin } = await req.json();
 
@@ -105,7 +74,7 @@ export async function POST(req: Request) {
 
     if (
       !makeAdmin &&
-      guard.currentUser.email?.toLowerCase?.() === normalizedEmail
+      guard.user.email?.toLowerCase?.() === normalizedEmail
     ) {
       return NextResponse.json(
         { error: "Superadmin cannot revoke their own access" },
@@ -117,8 +86,11 @@ export async function POST(req: Request) {
     await targetUser.save();
 
     // Keep Firebase custom claims aligned for legacy claim checks.
-    const firebaseUser = await admin.auth().getUserByEmail(normalizedEmail);
-    await admin.auth().setCustomUserClaims(firebaseUser.uid, { admin: makeAdmin });
+    const firebaseUser = await adminAuth.getUserByEmail(normalizedEmail);
+    await adminAuth.setCustomUserClaims(firebaseUser.uid, {
+      admin: makeAdmin,
+      role: targetUser.role,
+    });
 
     return NextResponse.json({
       success: true,

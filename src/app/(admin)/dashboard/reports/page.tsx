@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import {
   Bar,
   BarChart,
@@ -257,7 +258,7 @@ export default function ReportsPage() {
       else setLoading(true);
       try {
         setError("");
-        const response = await fetch(`${API}/api/orders?type=all`);
+        const response = await adminFetch(`${API}/api/orders?type=all`);
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error || "Failed to fetch reports data.");
         setOrders(Array.isArray(data) ? data : data.orders || []);

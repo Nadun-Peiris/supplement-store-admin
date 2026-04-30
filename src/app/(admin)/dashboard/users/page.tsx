@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/adminClient";
 import { Search, Plus, Edit2, Trash2, X, CheckCircle2, AlertCircle, Info, Users } from "lucide-react";
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
@@ -143,20 +144,10 @@ export default function UsersPage() {
     }, 3000);
   };
 
-  /* ---------------- TOKEN HELPER ---------------- */
-  const getToken = () =>
-    document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("firebaseToken="))
-      ?.split("=")[1];
-
   /* ---------------- FETCH USERS ---------------- */
   const fetchUsers = async () => {
     try {
-      const token = getToken();
-      const res = await fetch("/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminFetch("/api/users");
       if (!res.ok) {
         throw new Error("Failed to fetch users");
       }
@@ -213,10 +204,7 @@ export default function UsersPage() {
 
     try {
       setIsEditLoading(true);
-      const token = getToken();
-      const res = await fetch(`/api/users/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminFetch(`/api/users/${user._id}`);
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to load user details");
@@ -269,12 +257,10 @@ export default function UsersPage() {
       action: async () => {
         try {
           setStatusLoadingId(user._id);
-          const token = getToken();
-          const res = await fetch(`/api/users/${user._id}`, {
+          const res = await adminFetch(`/api/users/${user._id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ isBlocked: nextBlockedState }),
           });
@@ -306,12 +292,10 @@ export default function UsersPage() {
     if (!editingUser) return;
     try {
       setIsEditLoading(true);
-      const token = getToken();
-      const res = await fetch(`/api/users/${editingUser._id}`, {
+      const res = await adminFetch(`/api/users/${editingUser._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -341,10 +325,8 @@ export default function UsersPage() {
       confirmText: "Delete",
       isDanger: true,
       action: async () => {
-        const token = getToken();
-        const res = await fetch(`/api/users/${user._id}`, {
+        const res = await adminFetch(`/api/users/${user._id}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error("Failed to delete user");

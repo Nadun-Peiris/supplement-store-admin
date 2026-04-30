@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { onAuthStateChanged, updateProfile, type User } from "firebase/auth";
+import { adminFetch } from "@/lib/adminClient";
 import {
   Activity,
   BadgeCheck,
@@ -17,7 +18,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -167,12 +167,7 @@ export default function ProfilePage() {
       }
 
       try {
-        const token = await firebaseUser.getIdToken();
-        const response = await fetch("/api/admin/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await adminFetch("/api/admin/profile");
 
         const data = (await response.json()) as
           | { user: AdminProfile }
@@ -245,11 +240,9 @@ export default function ProfilePage() {
     setBanner(null);
 
     try {
-      const token = await authUser.getIdToken();
-      const response = await fetch("/api/admin/profile", {
+      const response = await adminFetch("/api/admin/profile", {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
