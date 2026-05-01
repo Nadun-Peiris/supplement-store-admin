@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/adminClient";
 import { Search, Plus, Edit2, Trash2, X, CheckCircle2, AlertCircle, Info, Users } from "lucide-react";
 
@@ -189,6 +189,20 @@ export default function UsersPage() {
       if (roleDiff !== 0) return roleDiff;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
+  const userSummary = useMemo(() => {
+    const total = users.length;
+    const customerCount = users.filter((user) => user.role === "customer").length;
+    const adminCount = users.filter((user) => user.role === "admin").length;
+    const superadminCount = users.filter((user) => user.role === "superadmin").length;
+
+    return {
+      total,
+      customerCount,
+      adminCount,
+      superadminCount,
+    };
+  }, [users]);
 
   /* ---------------- EDIT ---------------- */
   const canManageUser = (user: User) =>
@@ -416,6 +430,25 @@ export default function UsersPage() {
           </button>
         </div>
       </Panel>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">All Users</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">{userSummary.total}</p>
+        </div>
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Customers</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">{userSummary.customerCount}</p>
+        </div>
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Admins</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">{userSummary.adminCount}</p>
+        </div>
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Superadmins</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">{userSummary.superadminCount}</p>
+        </div>
+      </div>
 
       {/* Data Table Panel */}
       <Panel className="p-6">

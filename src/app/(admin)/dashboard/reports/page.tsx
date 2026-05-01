@@ -18,7 +18,6 @@ import {
   YAxis,
 } from "recharts";
 import jsPDF from "jspdf";
-import Papa from "papaparse";
 import {
   ArrowUpRight,
   CalendarRange,
@@ -93,6 +92,8 @@ const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
 ];
 
 const PIE_COLORS = ["#03c7fe", "#0ea5e9", "#38bdf8", "#7dd3fc", "#bae6fd"];
+const REPORT_BRAND = "Supplement Lanka";
+const REPORT_PDF_FILENAME_PREFIX = "supplement-lanka-report";
 
 const compactNumberFormatter = new Intl.NumberFormat("en", {
   notation: "compact",
@@ -182,6 +183,179 @@ function formatDateInputValue(date: Date | null) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function escapeXml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeWorksheetName(value: string) {
+  return value.replace(/[\\/*?:[\]]/g, " ").slice(0, 31) || "Sheet";
+}
+
+function buildExcelWorkbookXml(sheets: Array<{ name: string; rows: string[]; columnWidths?: number[] }>) {
+  const worksheetXml = sheets
+    .map((sheet) => {
+      const columns = (sheet.columnWidths || [])
+        .map((width) => `<Column ss:AutoFitWidth="0" ss:Width="${width}"/>`)
+        .join("");
+
+      return `
+        <Worksheet ss:Name="${escapeXml(sanitizeWorksheetName(sheet.name))}">
+          <Table>
+            ${columns}
+            ${sheet.rows.join("")}
+          </Table>
+          <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+            <FreezePanes/>
+            <FrozenNoSplit/>
+            <SplitHorizontal>1</SplitHorizontal>
+            <TopRowBottomPane>1</TopRowBottomPane>
+            <ActivePane>2</ActivePane>
+            <ProtectObjects>False</ProtectObjects>
+            <ProtectScenarios>False</ProtectScenarios>
+          </WorksheetOptions>
+        </Worksheet>
+      `;
+    })
+    .join("");
+
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+    <Author>${escapeXml(REPORT_BRAND)}</Author>
+    <LastAuthor>${escapeXml(REPORT_BRAND)}</LastAuthor>
+    <Company>${escapeXml(REPORT_BRAND)}</Company>
+  </DocumentProperties>
+  <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+    <WindowHeight>12435</WindowHeight>
+    <WindowWidth>20355</WindowWidth>
+    <ProtectStructure>False</ProtectStructure>
+    <ProtectWindows>False</ProtectWindows>
+  </ExcelWorkbook>
+  <Styles>
+    <Style ss:ID="Default" ss:Name="Normal">
+      <Alignment ss:Vertical="Center"/>
+      <Borders/>
+      <Font ss:FontName="Arial" ss:Size="10" ss:Color="#111111"/>
+      <Interior/>
+      <NumberFormat/>
+      <Protection/>
+    </Style>
+    <Style ss:ID="title">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="18" ss:Bold="1" ss:Color="#111111"/>
+      <Interior ss:Color="#EAFBFF" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="subtitle">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#02A9D8"/>
+    </Style>
+    <Style ss:ID="section">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="11" ss:Bold="1" ss:Color="#02A9D8"/>
+      <Interior ss:Color="#F2FBFF" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="label">
+      <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#6B7280"/>
+    </Style>
+    <Style ss:ID="value">
+      <Font ss:FontName="Arial" ss:Size="11" ss:Bold="1" ss:Color="#111111"/>
+    </Style>
+    <Style ss:ID="metricLabel">
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="9" ss:Bold="1" ss:Color="#02A9D8"/>
+      <Interior ss:Color="#F8FDFF" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="metricValue">
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="13" ss:Bold="1" ss:Color="#111111"/>
+      <Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="header">
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+      <Interior ss:Color="#03C7FE" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CFEEF7"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="cell">
+      <Alignment ss:Vertical="Center"/>
+      <Borders>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="accentCell">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#111111"/>
+      <Interior ss:Color="#FBFDFF" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E8F4F8"/>
+      </Borders>
+    </Style>
+  </Styles>
+  ${worksheetXml}
+</Workbook>`;
+}
+
+function buildExcelRow(cells: string[]) {
+  return `<Row>${cells.join("")}</Row>`;
+}
+
+function buildExcelCell(
+  value: string | number,
+  options: {
+    styleId?: string;
+    type?: "String" | "Number";
+    mergeAcross?: number;
+  } = {}
+) {
+  const { styleId = "cell", type = typeof value === "number" ? "Number" : "String", mergeAcross } = options;
+  const mergeAttr = typeof mergeAcross === "number" ? ` ss:MergeAcross="${mergeAcross}"` : "";
+  const safeValue = type === "Number" ? String(value) : escapeXml(String(value));
+  return `<Cell ss:StyleID="${styleId}"${mergeAttr}><Data ss:Type="${type}">${safeValue}</Data></Cell>`;
 }
 
 function buildTimelineData(orders: Order[], start: Date | null, end: Date | null) {
@@ -411,41 +585,400 @@ export default function ReportsPage() {
   }, [customRange, rangePreset]);
 
   const handleExportPdf = () => {
-    const doc = new jsPDF();
-    const lines = [
-      `Report Range: ${activeRangeLabel}`, `Order Type: ${orderTypeFilter}`,
-      `Revenue: ${formatCurrency(summary.totalRevenue)}`, `Orders: ${summary.totalOrders}`,
-      `Average Order Value: ${formatCurrency(summary.avgOrderValue)}`, `Units Sold: ${summary.totalUnits}`,
-      `Paid Rate: ${formatPercent(summary.paidRate)}`, `Completion Rate: ${formatPercent(summary.completionRate)}`,
-      "", "Top Products",
-      ...topProducts.map((p, i) => `${i + 1}. ${p.name} | ${formatCurrency(p.revenue)} | ${p.units} units`),
-      "", "Top Cities",
-      ...topCities.map((c, i) => `${i + 1}. ${c.city} | ${formatCurrency(c.revenue)} | ${c.orders} orders`),
-    ];
-    doc.setFontSize(18);
-    doc.text("Supplement Store Admin Report", 14, 20);
-    doc.setFontSize(11);
-    let y = 34;
-    lines.forEach((line) => { if (y > 280) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 8; });
-    doc.save(`reports-${rangePreset}-${Date.now()}.pdf`);
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 36;
+    const cardGap = 12;
+    const cardWidth = (pageWidth - margin * 2 - cardGap) / 2;
+    let y = 0;
+
+    const drawPageFrame = () => {
+      doc.setFillColor(242, 251, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
+      doc.setFillColor(3, 199, 254);
+      doc.roundedRect(margin, 24, pageWidth - margin * 2, 88, 24, 24, "F");
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(margin, 128, pageWidth - margin * 2, pageHeight - 164, 28, 28, "F");
+      doc.setDrawColor(216, 238, 246);
+      doc.roundedRect(margin, 128, pageWidth - margin * 2, pageHeight - 164, 28, 28, "S");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("REPORTS COMMAND CENTER", margin + 24, 52);
+      doc.setFontSize(24);
+      doc.text(`${REPORT_BRAND} Analytics Report`, margin + 24, 82);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Generated ${new Date().toLocaleString()}`, pageWidth - margin - 24, 52, {
+        align: "right",
+      });
+      doc.setFont("helvetica", "bold");
+      doc.text(activeRangeLabel, pageWidth - margin - 24, 82, { align: "right" });
+      y = 156;
+    };
+
+    const ensureSpace = (height: number) => {
+      if (y + height <= pageHeight - 44) return;
+      doc.addPage();
+      drawPageFrame();
+    };
+
+    const drawSectionTitle = (title: string, subtitle: string) => {
+      ensureSpace(48);
+      doc.setTextColor(2, 169, 216);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(title.toUpperCase(), margin + 20, y);
+      doc.setTextColor(17, 17, 17);
+      doc.setFontSize(15);
+      doc.text(subtitle, margin + 20, y + 18);
+      y += 34;
+    };
+
+    const drawMetricCard = (
+      x: number,
+      top: number,
+      title: string,
+      value: string,
+      hint: string,
+      delta?: number | null
+    ) => {
+      doc.setFillColor(251, 253, 255);
+      doc.setDrawColor(216, 238, 246);
+      doc.roundedRect(x, top, cardWidth, 78, 18, 18, "FD");
+      doc.setTextColor(2, 169, 216);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(title.toUpperCase(), x + 16, top + 20);
+      doc.setTextColor(17, 17, 17);
+      doc.setFontSize(18);
+      doc.text(value, x + 16, top + 42);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text(hint, x + 16, top + 60, { maxWidth: cardWidth - 32 });
+      if (typeof delta === "number") {
+        const isPositive = delta >= 0;
+        doc.setFillColor(isPositive ? 236 : 254, isPositive ? 253 : 242, isPositive ? 243 : 242);
+        doc.roundedRect(x + cardWidth - 70, top + 14, 54, 18, 9, 9, "F");
+        doc.setTextColor(isPositive ? 4 : 220, isPositive ? 120 : 38, isPositive ? 87 : 38);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(`${isPositive ? "+" : ""}${delta.toFixed(1)}%`, x + cardWidth - 43, top + 26, {
+          align: "center",
+        });
+      }
+    };
+
+    const drawRankedList = (
+      title: string,
+      items: string[],
+      x: number,
+      top: number,
+      width: number
+    ) => {
+      const listHeight = Math.max(120, 34 + items.length * 22);
+      doc.setFillColor(251, 253, 255);
+      doc.setDrawColor(216, 238, 246);
+      doc.roundedRect(x, top, width, listHeight, 20, 20, "FD");
+      doc.setTextColor(2, 169, 216);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(title.toUpperCase(), x + 16, top + 20);
+      doc.setTextColor(17, 17, 17);
+      doc.setFontSize(10);
+      items.forEach((item, index) => {
+        const lineY = top + 42 + index * 22;
+        doc.setFillColor(224, 244, 251);
+        doc.circle(x + 20, lineY - 4, 8, "F");
+        doc.setTextColor(3, 199, 254);
+        doc.setFontSize(8);
+        doc.text(String(index + 1), x + 20, lineY - 1, { align: "center" });
+        doc.setTextColor(17, 17, 17);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(item, x + 34, lineY, { maxWidth: width - 48 });
+      });
+      return listHeight;
+    };
+
+    const drawSimpleTable = (
+      title: string,
+      headers: string[],
+      rows: string[][]
+    ) => {
+      drawSectionTitle(title, "Highest value customer orders");
+      const columnWidths = [68, 122, 66, 56, 65, 80];
+      ensureSpace(32 + rows.length * 24);
+      const tableX = margin + 20;
+      const tableWidth = pageWidth - margin * 2 - 40;
+      doc.setFillColor(3, 199, 254);
+      doc.roundedRect(tableX, y, tableWidth, 24, 12, 12, "F");
+      let cursorX = tableX + 10;
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      headers.forEach((header, index) => {
+        doc.text(header, cursorX, y + 16);
+        cursorX += columnWidths[index];
+      });
+      y += 30;
+
+      rows.forEach((row, rowIndex) => {
+        ensureSpace(24);
+        doc.setFillColor(rowIndex % 2 === 0 ? 251 : 255, rowIndex % 2 === 0 ? 253 : 255, 255);
+        doc.setDrawColor(232, 244, 248);
+        doc.roundedRect(tableX, y - 2, tableWidth, 22, 8, 8, "FD");
+        let rowX = tableX + 10;
+        doc.setTextColor(17, 17, 17);
+        doc.setFont("helvetica", rowIndex === 0 ? "bold" : "normal");
+        doc.setFontSize(8);
+        row.forEach((cell, index) => {
+          doc.text(cell, rowX, y + 12, { maxWidth: columnWidths[index] - 8 });
+          rowX += columnWidths[index];
+        });
+        y += 26;
+      });
+    };
+
+    drawPageFrame();
+    drawSectionTitle("Report Snapshot", "Operational summary aligned with the admin dashboard");
+
+    const metricsTop = y;
+    metricCards.forEach((card, index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      drawMetricCard(
+        margin + 20 + column * (cardWidth + cardGap),
+        metricsTop + row * 90,
+        card.title,
+        card.value,
+        card.hint,
+        card.delta
+      );
+    });
+    y = metricsTop + Math.ceil(metricCards.length / 2) * 90 + 8;
+
+    drawSectionTitle("Signals", "What stands out in this report window");
+    const noteLines = insightNotes.length
+      ? insightNotes
+      : ["No standout signals were generated for the selected filters."];
+    noteLines.forEach((note) => {
+      ensureSpace(30);
+      doc.setFillColor(242, 251, 255);
+      doc.setDrawColor(216, 238, 246);
+      const wrapped = doc.splitTextToSize(note, pageWidth - margin * 2 - 72);
+      const boxHeight = 18 + wrapped.length * 12;
+      doc.roundedRect(margin + 20, y, pageWidth - margin * 2 - 40, boxHeight, 16, 16, "FD");
+      doc.setTextColor(68, 68, 68);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(wrapped, margin + 34, y + 18);
+      y += boxHeight + 10;
+    });
+
+    ensureSpace(180);
+    drawSectionTitle("Leaders", "Top products and strongest cities");
+    const leftListHeight = drawRankedList(
+      "Top Products",
+      topProducts.length
+        ? topProducts.map((product) => `${product.name} • ${formatCurrency(product.revenue)} • ${product.units} units`)
+        : ["No product data available."],
+      margin + 20,
+      y,
+      (pageWidth - margin * 2 - 52) / 2
+    );
+    drawRankedList(
+      "Top Cities",
+      topCities.length
+        ? topCities.map((city) => `${city.city} • ${formatCurrency(city.revenue)} • ${city.orders} orders`)
+        : ["No city data available."],
+      margin + 32 + (pageWidth - margin * 2 - 52) / 2,
+      y,
+      (pageWidth - margin * 2 - 52) / 2
+    );
+    y += leftListHeight + 18;
+
+    drawSimpleTable(
+      "Priority Orders",
+      ["Order", "Customer", "Placed", "Type", "Payment", "Total"],
+      featuredOrders.length
+        ? featuredOrders.slice(0, 10).map((order) => [
+            formatOrderId(order._id),
+            `${order.billingDetails?.firstName || ""} ${order.billingDetails?.lastName || ""}`.trim() || "Unknown",
+            formatDateLabel(order.createdAt),
+            order.orderType || "normal",
+            order.paymentStatus || "pending",
+            formatCurrency(order.total || 0),
+          ])
+        : [["—", "No orders found", "—", "—", "—", "—"]]
+    );
+
+    doc.save(`${REPORT_PDF_FILENAME_PREFIX}-${rangePreset}-${Date.now()}.pdf`);
   };
 
-  const handleExportCsv = () => {
-    const csv = Papa.unparse(filteredOrders.map((o) => ({
-      orderId: o._id, createdAt: o.createdAt,
-      customer: `${o.billingDetails?.firstName || ""} ${o.billingDetails?.lastName || ""}`.trim(),
-      email: o.billingDetails?.email || "", city: o.billingDetails?.city || "",
-      orderType: o.orderType || "normal", paymentStatus: o.paymentStatus || "pending",
-      fulfillmentStatus: o.fulfillmentStatus || "unfulfilled",
-      items: o.items.map((i) => `${i.name} x${i.quantity}`).join(" | "), total: o.total || 0,
-    })));
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `reports-${rangePreset}-${Date.now()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportExcel = () => {
+    const generatedAt = new Date().toLocaleString();
+    const summarySheetRows = [
+      buildExcelRow([buildExcelCell(`${REPORT_BRAND} Analytics Report`, { styleId: "title", mergeAcross: 3 })]),
+      buildExcelRow([buildExcelCell("Reports command center export", { styleId: "subtitle", mergeAcross: 3 })]),
+      buildExcelRow([
+        buildExcelCell("Range", { styleId: "label" }),
+        buildExcelCell(activeRangeLabel, { styleId: "value" }),
+        buildExcelCell("Order Type", { styleId: "label" }),
+        buildExcelCell(orderTypeFilter === "all" ? "All orders" : orderTypeFilter, { styleId: "value" }),
+      ]),
+      buildExcelRow([
+        buildExcelCell("Generated", { styleId: "label" }),
+        buildExcelCell(generatedAt, { styleId: "value" }),
+        buildExcelCell("Visible Orders", { styleId: "label" }),
+        buildExcelCell(filteredOrders.length, { styleId: "value", type: "Number" }),
+      ]),
+      buildExcelRow([buildExcelCell("", { styleId: "cell", mergeAcross: 3 })]),
+      buildExcelRow([
+        buildExcelCell("Revenue", { styleId: "metricLabel" }),
+        buildExcelCell("Average Order", { styleId: "metricLabel" }),
+        buildExcelCell("Order Volume", { styleId: "metricLabel" }),
+        buildExcelCell("Units Sold", { styleId: "metricLabel" }),
+      ]),
+      buildExcelRow([
+        buildExcelCell(formatCurrency(summary.totalRevenue), { styleId: "metricValue" }),
+        buildExcelCell(formatCurrency(summary.avgOrderValue), { styleId: "metricValue" }),
+        buildExcelCell(summary.totalOrders.toLocaleString(), { styleId: "metricValue" }),
+        buildExcelCell(summary.totalUnits.toLocaleString(), { styleId: "metricValue" }),
+      ]),
+      buildExcelRow([
+        buildExcelCell("Subscription Mix", { styleId: "metricLabel" }),
+        buildExcelCell("Paid Rate", { styleId: "metricLabel" }),
+        buildExcelCell("Completion Rate", { styleId: "metricLabel" }),
+        buildExcelCell("Paid Orders", { styleId: "metricLabel" }),
+      ]),
+      buildExcelRow([
+        buildExcelCell(formatPercent(summary.subscriptionShare), { styleId: "metricValue" }),
+        buildExcelCell(formatPercent(summary.paidRate), { styleId: "metricValue" }),
+        buildExcelCell(formatPercent(summary.completionRate), { styleId: "metricValue" }),
+        buildExcelCell(summary.paidOrders.toLocaleString(), { styleId: "metricValue" }),
+      ]),
+      buildExcelRow([buildExcelCell("", { styleId: "cell", mergeAcross: 3 })]),
+      buildExcelRow([buildExcelCell("Report Notes", { styleId: "section", mergeAcross: 3 })]),
+      ...(insightNotes.length
+        ? insightNotes.map((note) =>
+            buildExcelRow([buildExcelCell(note, { styleId: "accentCell", mergeAcross: 3 })])
+          )
+        : [buildExcelRow([buildExcelCell("No report notes available for the selected filters.", { styleId: "accentCell", mergeAcross: 3 })])]),
+      buildExcelRow([buildExcelCell("", { styleId: "cell", mergeAcross: 3 })]),
+      buildExcelRow([
+        buildExcelCell("Top Products", { styleId: "section", mergeAcross: 1 }),
+        buildExcelCell("Top Cities", { styleId: "section", mergeAcross: 1 }),
+      ]),
+      ...Array.from({
+        length: Math.max(topProducts.length, topCities.length, 1),
+      }).map((_, index) =>
+        buildExcelRow([
+          buildExcelCell(
+            topProducts[index]
+              ? `${index + 1}. ${topProducts[index].name} • ${formatCurrency(topProducts[index].revenue)} • ${topProducts[index].units} units`
+              : "—",
+            { styleId: "cell", mergeAcross: 1 }
+          ),
+          buildExcelCell(
+            topCities[index]
+              ? `${index + 1}. ${topCities[index].city} • ${formatCurrency(topCities[index].revenue)} • ${topCities[index].orders} orders`
+              : "—",
+            { styleId: "cell", mergeAcross: 1 }
+          ),
+        ])
+      ),
+    ];
+
+    const ordersSheetRows = [
+      buildExcelRow([buildExcelCell("Visible Orders", { styleId: "title", mergeAcross: 8 })]),
+      buildExcelRow([
+        buildExcelCell("Order", { styleId: "header" }),
+        buildExcelCell("Placed", { styleId: "header" }),
+        buildExcelCell("Customer", { styleId: "header" }),
+        buildExcelCell("Email", { styleId: "header" }),
+        buildExcelCell("City", { styleId: "header" }),
+        buildExcelCell("Type", { styleId: "header" }),
+        buildExcelCell("Payment", { styleId: "header" }),
+        buildExcelCell("Fulfillment", { styleId: "header" }),
+        buildExcelCell("Total", { styleId: "header" }),
+      ]),
+      ...(filteredOrders.length
+        ? filteredOrders.map((order) =>
+            buildExcelRow([
+              buildExcelCell(formatOrderId(order._id)),
+              buildExcelCell(formatDateLabel(order.createdAt)),
+              buildExcelCell(
+                `${order.billingDetails?.firstName || ""} ${order.billingDetails?.lastName || ""}`.trim() || "Unknown"
+              ),
+              buildExcelCell(order.billingDetails?.email || "—"),
+              buildExcelCell(order.billingDetails?.city || "Unknown"),
+              buildExcelCell(order.orderType || "normal"),
+              buildExcelCell(order.paymentStatus || "pending"),
+              buildExcelCell(order.fulfillmentStatus || "unfulfilled"),
+              buildExcelCell(formatCurrency(order.total || 0), { styleId: "accentCell" }),
+            ])
+          )
+        : [
+            buildExcelRow([
+              buildExcelCell("No orders found for the current filters.", {
+                styleId: "cell",
+                mergeAcross: 8,
+              }),
+            ]),
+          ]),
+    ];
+
+    const productSheetRows = [
+      buildExcelRow([buildExcelCell("Product Performance", { styleId: "title", mergeAcross: 3 })]),
+      buildExcelRow([
+        buildExcelCell("Product", { styleId: "header" }),
+        buildExcelCell("Revenue", { styleId: "header" }),
+        buildExcelCell("Units", { styleId: "header" }),
+        buildExcelCell("Order Lines", { styleId: "header" }),
+      ]),
+      ...(topProducts.length
+        ? topProducts.map((product) =>
+            buildExcelRow([
+              buildExcelCell(product.name),
+              buildExcelCell(formatCurrency(product.revenue), { styleId: "accentCell" }),
+              buildExcelCell(product.units, { type: "Number" }),
+              buildExcelCell(product.orders, { type: "Number" }),
+            ])
+          )
+        : [
+            buildExcelRow([
+              buildExcelCell("No product performance data available.", {
+                mergeAcross: 3,
+              }),
+            ]),
+          ]),
+    ];
+
+    const workbookXml = buildExcelWorkbookXml([
+      {
+        name: "Summary",
+        rows: summarySheetRows,
+        columnWidths: [120, 180, 120, 180],
+      },
+      {
+        name: "Orders",
+        rows: ordersSheetRows,
+        columnWidths: [85, 90, 130, 170, 90, 70, 90, 95, 90],
+      },
+      {
+        name: "Products",
+        rows: productSheetRows,
+        columnWidths: [220, 110, 70, 90],
+      },
+    ]);
+
+    downloadBlob(
+      new Blob([workbookXml], { type: "application/vnd.ms-excel;charset=utf-8;" }),
+      `${REPORT_PDF_FILENAME_PREFIX}-${rangePreset}-${Date.now()}.xls`
+    );
   };
 
   /* ── Loading state ── */
@@ -483,11 +1016,11 @@ export default function ReportsPage() {
           </button>
           <button
             type="button"
-            onClick={handleExportCsv}
+            onClick={handleExportExcel}
             className="inline-flex items-center gap-2 rounded-2xl border border-[#cfeef7] bg-white px-4 py-2.5 text-xs font-black text-[#111] shadow-sm transition hover:scale-[1.02]"
           >
             <Download size={14} />
-            Export CSV
+            Export Excel
           </button>
           <button
             type="button"

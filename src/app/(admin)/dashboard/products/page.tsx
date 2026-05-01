@@ -379,6 +379,31 @@ export default function ProductsPage() {
     [form.brandName]
   );
 
+  const inventorySummary = useMemo(() => {
+    const totalProducts = products.length;
+    const totalStockUnits = products.reduce(
+      (sum, product) => sum + Math.max(0, Number(product.stock || 0)),
+      0
+    );
+    const totalInventoryValue = products.reduce((sum, product) => {
+      const basePrice = Number(product.price || 0);
+      const effectivePrice =
+        typeof product.discountPrice === "number" &&
+        product.discountPrice > 0 &&
+        product.discountPrice < basePrice
+          ? product.discountPrice
+          : basePrice;
+
+      return sum + effectivePrice * Math.max(0, Number(product.stock || 0));
+    }, 0);
+
+    return {
+      totalProducts,
+      totalStockUnits,
+      totalInventoryValue,
+    };
+  }, [products]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
@@ -661,6 +686,27 @@ export default function ProductsPage() {
           </button>
         </div>
       </Panel>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Total Products</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">
+            {inventorySummary.totalProducts.toLocaleString()}
+          </p>
+        </div>
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Total Stock</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">
+            {inventorySummary.totalStockUnits.toLocaleString()}
+          </p>
+        </div>
+        <div className="rounded-[24px] border border-white bg-white/80 p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">Inventory Value</p>
+          <p className="mt-2 text-2xl font-black text-[#111]">
+            LKR {Math.round(inventorySummary.totalInventoryValue).toLocaleString()}
+          </p>
+        </div>
+      </div>
 
       {/* Table Panel */}
       <Panel className="p-6">

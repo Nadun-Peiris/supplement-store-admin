@@ -462,7 +462,7 @@ export default function OrdersPage() {
               <span className="inline-flex items-center gap-2">
                 All Types
                 {orderTypeCounts.all > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "all" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "all" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {orderTypeCounts.all}
                   </span>
                 )}
@@ -477,7 +477,7 @@ export default function OrdersPage() {
               <span className="inline-flex items-center gap-2">
                 Normal
                 {orderTypeCounts.normal > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "normal" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "normal" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {orderTypeCounts.normal}
                   </span>
                 )}
@@ -492,7 +492,7 @@ export default function OrdersPage() {
               <span className="inline-flex items-center gap-2">
                 Subscription
                 {orderTypeCounts.subscription > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "subscription" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${orderTypeTab === "subscription" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {orderTypeCounts.subscription}
                   </span>
                 )}
@@ -515,7 +515,7 @@ export default function OrdersPage() {
                 <span className="inline-flex items-center gap-2">
                   {t === "all" ? "All Orders" : t}
                   {t !== "completed" && statusCounts[t] > 0 && (
-                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#03c7fe]/10 px-1 text-[9px] text-[#03c7fe]">
+                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-50 px-1 text-[9px] text-red-500">
                       {statusCounts[t]}
                     </span>
                   )}

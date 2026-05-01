@@ -23,6 +23,8 @@ import {
   Menu,
   Search,
   AlertCircle,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 type GlobalSearchResult = {
@@ -45,6 +47,7 @@ type SidebarSubscription = {
 };
 
 const PENDING_PAYMENTS_VIEWED_AT_KEY = "admin-sidebar-pending-payments-viewed-at";
+const ADMIN_THEME_STORAGE_KEY = "admin-dashboard-theme";
 
 const navItems = [
   { name: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
@@ -75,6 +78,25 @@ const navItems = [
   { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
 ];
 
+const desktopNavSections = [
+  {
+    label: "Insights",
+    items: ["Overview", "Reports"],
+  },
+  {
+    label: "Operations",
+    items: ["Orders", "Pending Payments", "Subscriptions"],
+  },
+  {
+    label: "Catalog",
+    items: ["Products", "Categories", "Brands"],
+  },
+  {
+    label: "Access",
+    items: ["Users", "Admins", "Profile"],
+  },
+] as const;
+
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -88,6 +110,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<GlobalSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [sidebarCounts, setSidebarCounts] = useState<Record<SidebarBadgeKey, number>>({
     orders: 0,
     pendingPayments: 0,
@@ -100,6 +123,22 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     setGlobalSearch("");
     setIsSearchOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedTheme = window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY);
+    if (storedTheme === "dark" || storedTheme === "light") {
+      setTheme(storedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    document.documentElement.setAttribute("data-admin-theme", theme);
+    window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -292,13 +331,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           setSidebarCounts({
             orders: orders.filter(
               (order) =>
-                (order.fulfillmentStatus || "unfulfilled").toLowerCase() === "unfulfilled"
+                (order.fulfillmentStatus || "unfulfilled").toLowerCase() !== "completed"
             ).length,
             pendingPayments: pendingOrders.filter((order) => {
               const createdAtMs = new Date(order.createdAt || 0).getTime();
-              return (
-                createdAtMs > pendingPaymentsViewedAtMs
-              );
+              return createdAtMs > pendingPaymentsViewedAtMs;
             }).length,
             subscriptions: subscriptions.filter((subscription) => !subscription.adminViewed).length,
           });
@@ -328,6 +365,22 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   const visibleNavItems = navItems.filter(
     (item) => item.href !== "/dashboard/admins" || role === "superadmin"
+  );
+  const visibleNavItemsByName = useMemo(
+    () => new Map(visibleNavItems.map((item) => [item.name, item])),
+    [visibleNavItems]
+  );
+  const visibleDesktopNavSections = useMemo(
+    () =>
+      desktopNavSections
+        .map((section) => ({
+          ...section,
+          items: section.items
+            .map((itemName) => visibleNavItemsByName.get(itemName))
+            .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        }))
+        .filter((section) => section.items.length > 0),
+    [visibleNavItemsByName]
   );
 
   const roleLabel = useMemo(() => {
@@ -390,7 +443,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f2fbff] font-sans">
+    <div className="flex h-screen overflow-hidden bg-[#f2fbff] font-sans" data-admin-theme={theme}>
       
       {/* --- MOBILE OVERLAY --- */}
       {isMobileMenuOpen && (
@@ -428,41 +481,47 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto px-4 py-6 hide-scrollbar">
-          <p className="mb-4 px-2 text-[10px] font-black uppercase tracking-widest text-[#aaa]">
-            Main Menu
-          </p>
-          <nav className="flex flex-col gap-2">
-            {visibleNavItems.map((item) => {
-              const isActive =
-                item.href === "/dashboard/overview"
-                  ? pathname === "/dashboard" || pathname === item.href
-                  : pathname === item.href || pathname?.startsWith(`${item.href}/`);
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-xs font-black transition-all ${
-                    isActive
-                      ? "bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]"
-                      : "text-[#888] hover:bg-[#f2fbff] hover:text-[#03c7fe]"
-                  }`}
-                >
-                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className="min-w-0 flex-1">{item.name}</span>
-                  {item.badgeKey && sidebarCounts[item.badgeKey] > 0 ? (
-                    <span
-                      className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-black ${
-                        isActive ? "bg-white text-red-500" : "bg-red-500 text-white"
-                      }`}
-                    >
-                      {sidebarCounts[item.badgeKey]}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
+          <nav className="flex flex-col gap-6">
+            {visibleDesktopNavSections.map((section) => (
+              <div key={section.label}>
+                <p className="mb-3 px-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#aaa]">
+                  {section.label}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {section.items.map((item) => {
+                    const isActive =
+                      item.href === "/dashboard/overview"
+                        ? pathname === "/dashboard" || pathname === item.href
+                        : pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-xs font-black transition-all ${
+                          isActive
+                            ? "bg-[#03c7fe] text-white shadow-[0_8px_20px_rgba(3,199,254,0.3)]"
+                            : "text-[#888] hover:bg-[#f2fbff] hover:text-[#03c7fe]"
+                        }`}
+                      >
+                        <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                        <span className="min-w-0 flex-1">{item.name}</span>
+                        {item.badgeKey && sidebarCounts[item.badgeKey] > 0 ? (
+                          <span
+                            className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-black ${
+                              isActive ? "bg-white text-red-500" : "bg-red-500 text-white"
+                            }`}
+                          >
+                            {sidebarCounts[item.badgeKey]}
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
       </aside>
@@ -544,6 +603,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           {/* Right: Profile Info */}
           <div className="flex items-center justify-end gap-5">
+            <button
+              type="button"
+              onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#cfeef7] bg-white text-[#888] shadow-sm transition hover:border-[#03c7fe] hover:text-[#03c7fe]"
+              aria-label={theme === "light" ? "Enable dark mode" : "Enable light mode"}
+              title={theme === "light" ? "Enable dark mode" : "Enable light mode"}
+            >
+              {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
             <button
               type="button"
               onClick={handleLogout}

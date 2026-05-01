@@ -57,8 +57,8 @@ export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("active");
-  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("all");
-  const [dateRange, setDateRange] = useState<DateRangeValue>({ start: "", end: "" });
+  const [selectedRangePreset, setSelectedRangePreset] = useState<DashboardRangePreset>("today");
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => getPresetDateRange("today"));
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -108,16 +108,18 @@ export default function SubscriptionsPage() {
     if (dateRange.start) {
       const start = new Date(`${dateRange.start}T00:00:00`);
       list = list.filter((sub) => {
-        if (!sub.nextBillingDate) return false;
-        return new Date(sub.nextBillingDate) >= start;
+        const filterDate = sub.lastPaymentDate || sub.orderId?.createdAt;
+        if (!filterDate) return false;
+        return new Date(filterDate) >= start;
       });
     }
 
     if (dateRange.end) {
       const end = new Date(`${dateRange.end}T23:59:59.999`);
       list = list.filter((sub) => {
-        if (!sub.nextBillingDate) return false;
-        return new Date(sub.nextBillingDate) <= end;
+        const filterDate = sub.lastPaymentDate || sub.orderId?.createdAt;
+        if (!filterDate) return false;
+        return new Date(filterDate) <= end;
       });
     }
 
@@ -424,7 +426,7 @@ export default function SubscriptionsPage() {
               <span className="inline-flex items-center gap-2">
                 Active
                 {tabCounts.active > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "active" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "active" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {tabCounts.active}
                   </span>
                 )}
@@ -439,7 +441,7 @@ export default function SubscriptionsPage() {
               <span className="inline-flex items-center gap-2">
                 Cancelled
                 {tabCounts.cancelled > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "cancelled" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "cancelled" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {tabCounts.cancelled}
                   </span>
                 )}
@@ -454,7 +456,7 @@ export default function SubscriptionsPage() {
               <span className="inline-flex items-center gap-2">
                 All
                 {tabCounts.all > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "all" ? "bg-white text-[#03c7fe]" : "bg-[#03c7fe] text-white"}`}>
+                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] ${statusTab === "all" ? "bg-white text-red-500" : "bg-red-500 text-white"}`}>
                     {tabCounts.all}
                   </span>
                 )}
@@ -464,7 +466,7 @@ export default function SubscriptionsPage() {
 
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Total Active:</span>
-            <span className="rounded-full bg-[#f2fbff] px-3 py-1 text-xs font-black text-[#03c7fe]">
+            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-500">
               {subscriptions.filter(s => s.status.toLowerCase() === 'active').length}
             </span>
           </div>

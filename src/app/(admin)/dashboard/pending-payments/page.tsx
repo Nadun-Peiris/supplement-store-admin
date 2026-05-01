@@ -359,6 +359,12 @@ export default function PendingPaymentsPage() {
             </p>
             <h2 className="mt-1 text-xl font-black text-[#111]">Orders awaiting payment</h2>
           </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Total Pending:</span>
+            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-500">
+              {pendingOrders.length}
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
