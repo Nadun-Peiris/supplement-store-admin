@@ -154,11 +154,20 @@ export default function OrdersPage() {
       const query = search.toLowerCase().trim().replace(/^#/, "");
       const digitsOnlyQuery = query.replace(/\D/g, "");
       list = list.filter(
-        (o) =>
-          o._id.toLowerCase().includes(query) ||
-          o.billingDetails.phone.toLowerCase().includes(query) ||
-          (digitsOnlyQuery.length > 0 &&
-            o.billingDetails.phone.replace(/\D/g, "").includes(digitsOnlyQuery))
+        (o) => {
+          const fullName =
+            `${o.billingDetails.firstName || ""} ${o.billingDetails.lastName || ""}`
+              .trim()
+              .toLowerCase();
+
+          return (
+            o._id.toLowerCase().includes(query) ||
+            fullName.includes(query) ||
+            o.billingDetails.phone.toLowerCase().includes(query) ||
+            (digitsOnlyQuery.length > 0 &&
+              o.billingDetails.phone.replace(/\D/g, "").includes(digitsOnlyQuery))
+          );
+        }
       );
     }
 
@@ -416,7 +425,7 @@ export default function OrdersPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa]" />
             <input
               type="text"
-              placeholder="Search ID or phone..."
+              placeholder="Search ID, name, or phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-2xl border border-[#cfeef7] bg-white py-3 pl-10 pr-4 text-xs font-bold text-[#111] outline-none transition focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20"
