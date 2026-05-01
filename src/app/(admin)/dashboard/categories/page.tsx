@@ -5,7 +5,9 @@ import Link from "next/link";
 import { adminFetch } from "@/lib/adminClient";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
 import { ArrowLeft, ArrowRight, ImagePlus, Edit2, Trash2, Plus, Search, X, Layers, Star } from "lucide-react";
+import ConfirmDialog from "@/app/(admin)/dashboard/components/ConfirmDialog";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
+import ToastStack, { type DashboardToast } from "@/app/(admin)/dashboard/components/ToastStack";
 
 type Category = {
   _id: string;
@@ -24,6 +26,27 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 }
 
 const ITEMS_PER_PAGE = 20;
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
+type ConfirmState =
+  | {
+      title: string;
+      message: string;
+      confirmText: string;
+      isDanger?: boolean;
+      action: () => Promise<void> | void;
+    }
+  | null;
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,8 +63,22 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [toasts, setToasts] = useState<DashboardToast[]>([]);
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null);
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (
+    message: string,
+    type: DashboardToast["type"] = "info"
+  ) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -106,7 +143,10 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return alert("Category name required");
+    if (!name) {
+      showToast("Category name is required.", "error");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -115,7 +155,7 @@ export default function CategoriesPage() {
         imageUrl = await uploadToCloudinary(file);
       }
       if (!imageUrl) {
-        alert("Image required");
+        showToast("Category image is required.", "error");
         setLoading(false);
         return;
       }
@@ -130,18 +170,31 @@ export default function CategoriesPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(
+            res,
+            editingId ? "Failed to update category." : "Failed to create category."
+          )
+        );
+      }
 
       closeModal();
-      fetchCategories();
-    } catch {
-      alert("Operation failed");
+      await fetchCategories();
+      showToast(
+        editingId
+          ? `Category "${name}" updated successfully.`
+          : `Category "${name}" created successfully.`,
+        "success"
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error, "Failed to save category."), "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteCategories = async (ids: string[]) => {
+  const deleteCategories = async (ids: string[], label?: string) => {
     if (ids.length === 0) return;
     setDeleteLoading(true);
     try {
@@ -149,37 +202,52 @@ export default function CategoriesPage() {
         ids.map((id) => adminFetch(`/api/categories/${id}`, { method: "DELETE" }))
       );
 
-      if (responses.some((res) => !res.ok)) {
-        throw new Error("Failed to delete some categories");
+      const failedResponse = responses.find((res) => !res.ok);
+      if (failedResponse) {
+        throw new Error(
+          await getResponseMessage(
+            failedResponse,
+            ids.length === 1 ? "Failed to delete category." : "Failed to delete selected categories."
+          )
+        );
       }
 
       setSelectedCategoryIds((prev) => prev.filter((id) => !ids.includes(id)));
       await fetchCategories();
-    } catch {
-      alert("Failed to delete category");
+      showToast(
+        ids.length === 1 && label
+          ? `Category "${label}" deleted successfully.`
+          : `${ids.length} categor${ids.length === 1 ? "y" : "ies"} deleted successfully.`,
+        "success"
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error, "Failed to delete category."), "error");
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return;
-    await deleteCategories([id]);
+  const handleDelete = async (id: string, categoryName: string) => {
+    setConfirmState({
+      title: "Delete category?",
+      message: `Delete "${categoryName}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      isDanger: true,
+      action: () => deleteCategories([id], categoryName),
+    });
   };
 
   const handleBulkDelete = async () => {
     if (selectedCategoryIds.length === 0) return;
-    if (
-      !confirm(
-        `Delete ${selectedCategoryIds.length} selected categor${
-          selectedCategoryIds.length === 1 ? "y" : "ies"
-        }? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
-
-    await deleteCategories(selectedCategoryIds);
+    setConfirmState({
+      title: "Delete selected categories?",
+      message: `Delete ${selectedCategoryIds.length} selected categor${
+        selectedCategoryIds.length === 1 ? "y" : "ies"
+      }? This action cannot be undone.`,
+      confirmText: "Delete",
+      isDanger: true,
+      action: () => deleteCategories(selectedCategoryIds),
+    });
   };
 
   const toggleCategorySelection = (id: string) => {
@@ -228,6 +296,7 @@ export default function CategoriesPage() {
 
   return (
     <main className="min-h-screen bg-[#f2fbff] px-4 py-8 md:px-8">
+      <ToastStack toasts={toasts} />
       {/* Page Header Panel */}
       <Panel className="mb-6 flex flex-col gap-6 p-7 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
@@ -348,15 +417,15 @@ export default function CategoriesPage() {
                         <button
                           type="button"
                           onClick={() => handleEdit(cat)}
-                          className="text-[#aaa] transition hover:text-[#03c7fe]"
+                          className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-[#f2fbff] hover:text-[#03c7fe]"
                           title="Edit Category"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(cat._id)}
-                          className="text-[#aaa] transition hover:text-red-500"
+                          onClick={() => handleDelete(cat._id, cat.name)}
+                          className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-red-50 hover:text-red-500"
                           title="Delete Category"
                         >
                           <Trash2 size={16} />
@@ -478,6 +547,25 @@ export default function CategoriesPage() {
             </form>
           </Panel>
         </div>
+      )}
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          isDanger={confirmState.isDanger}
+          isLoading={isConfirmLoading}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            setIsConfirmLoading(true);
+            try {
+              await confirmState.action();
+              setConfirmState(null);
+            } finally {
+              setIsConfirmLoading(false);
+            }
+          }}
+        />
       )}
     </main>
   );

@@ -537,14 +537,14 @@ export default function UsersPage() {
                               type="button"
                               onClick={() => handleEditClick(user)}
                               disabled={isEditLoading}
-                              className="p-2 text-[#aaa] transition hover:text-[#03c7fe]"
+                              className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-[#f2fbff] hover:text-[#03c7fe]"
                             >
                               <Edit2 size={16} />
                             </button>
                             <button
                               type="button"
                               onClick={() => deleteUser(user)}
-                              className="p-2 text-[#aaa] transition hover:text-red-500"
+                              className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                               <Trash2 size={16} />
                             </button>

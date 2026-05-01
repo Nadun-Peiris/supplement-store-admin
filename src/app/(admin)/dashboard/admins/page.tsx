@@ -3,12 +3,21 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/adminClient";
 import { Search, Plus, Trash2, X, UserCog, ShieldCheck } from "lucide-react";
+import ConfirmDialog from "@/app/(admin)/dashboard/components/ConfirmDialog";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
 
 type AdminUser = {
   _id: string;
   email: string;
   role: "admin" | "superadmin";
+};
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmText: string;
+  isDanger?: boolean;
+  onConfirm: () => Promise<void>;
 };
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
@@ -29,6 +38,8 @@ export default function ManageAdminsPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
   // 🔹 Fetch admins from MongoDB
   const fetchAdmins = useCallback(async () => {
@@ -92,12 +103,6 @@ export default function ManageAdminsPage() {
   // 🔹 Update Firebase role via API route
   const updateRole = async (targetEmail: string, makeAdmin: boolean) => {
     if (!targetEmail.trim()) return setMessage("Please enter an email address.");
-    
-    // Add a confirmation dialog before revoking access
-    if (!makeAdmin) {
-      const confirmed = confirm(`Are you sure you want to revoke admin access for ${targetEmail}?`);
-      if (!confirmed) return;
-    }
 
     setLoading(true);
     setMessage("");
@@ -127,6 +132,19 @@ export default function ManageAdminsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const requestRevokeAdmin = (targetEmail: string) => {
+    setConfirmState({
+      title: "Revoke admin access",
+      message: `Are you sure you want to revoke admin access for ${targetEmail}?`,
+      confirmText: "Revoke Access",
+      isDanger: true,
+      onConfirm: async () => {
+        await updateRole(targetEmail, false);
+        setConfirmState(null);
+      },
+    });
   };
 
   const closeModal = () => {
@@ -263,7 +281,7 @@ export default function ManageAdminsPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => updateRole(admin.email, false)}
+                          onClick={() => requestRevokeAdmin(admin.email)}
                           disabled={loading}
                           className="inline-flex items-center justify-center rounded-xl p-2 text-[#aaa] transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
                           title="Revoke Admin Access"
@@ -349,6 +367,29 @@ export default function ManageAdminsPage() {
             </form>
           </Panel>
         </div>
+      )}
+
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          isDanger={confirmState.isDanger}
+          isLoading={isConfirmLoading}
+          onCancel={() => {
+            if (!isConfirmLoading) {
+              setConfirmState(null);
+            }
+          }}
+          onConfirm={async () => {
+            setIsConfirmLoading(true);
+            try {
+              await confirmState.onConfirm();
+            } finally {
+              setIsConfirmLoading(false);
+            }
+          }}
+        />
       )}
     </main>
   );

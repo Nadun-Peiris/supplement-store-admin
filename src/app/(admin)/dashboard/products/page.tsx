@@ -3,14 +3,39 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "@/lib/adminClient";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import { ArrowLeft, ArrowRight, Edit2, Plus, Search, Trash2, X, Minus, Package } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Edit2, Plus, Search, Trash2, X, Minus, Package } from "lucide-react";
+import ConfirmDialog from "@/app/(admin)/dashboard/components/ConfirmDialog";
 import PageLoader from "@/app/(admin)/dashboard/components/PageLoader";
+import ToastStack, {
+  type DashboardToast,
+} from "@/app/(admin)/dashboard/components/ToastStack";
 
 /* ─── Shared UI Component ────────────────────────────────────────── */
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`rounded-[28px] border border-white bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(3,199,254,0.08)] ${className}`}>
       {children}
+    </div>
+  );
+}
+
+function SelectField({
+  children,
+  className = "",
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={`${selectClass} appearance-none ${className}`.trim()}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#888]"
+      />
     </div>
   );
 }
@@ -69,6 +94,14 @@ type Product = {
 
 type Category = { _id: string; name: string };
 type Brand = { _id: string; name: string };
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmText: string;
+  isDanger?: boolean;
+  onConfirm: () => Promise<void>;
+};
 
 // Flattened form state for easier handling of standard inputs
 type ProductFormState = {
@@ -265,8 +298,20 @@ const initialForm: ProductFormState = {
 const ITEMS_PER_PAGE = 20;
 
 const inputClass = "w-full rounded-2xl border border-[#cfeef7] bg-white px-4 py-3 text-sm font-bold text-[#111] outline-none transition-colors focus:border-[#03c7fe] focus:ring-2 focus:ring-[#03c7fe]/20";
+const selectClass = `${inputClass} pr-10`;
 const formatPrice = (currency: string | undefined, amount: number) =>
   `${currency || "LKR"} ${amount.toLocaleString()}`;
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -281,15 +326,35 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [selectedBrandFilter, setSelectedBrandFilter] = useState("all");
+  const [stockFilterMode, setStockFilterMode] = useState<
+    "all" | "out" | "low" | "in" | "above"
+  >("all");
+  const [stockThreshold, setStockThreshold] = useState("10");
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [toasts, setToasts] = useState<DashboardToast[]>([]);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [hoverImageFile, setHoverImageFile] = useState<File | null>(null);
 
   const mainFileInputRef = useRef<HTMLInputElement>(null);
   const hoverFileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (
+    message: string,
+    type: DashboardToast["type"] = "info"
+  ) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
 
   const fetchProducts = async () => {
     try {
@@ -337,16 +402,52 @@ export default function ProductsPage() {
     void loadData();
   }, []);
 
+  const normalizedStockThreshold = useMemo(
+    () => Math.max(0, Number(stockThreshold) || 0),
+    [stockThreshold]
+  );
+
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return products;
-    return products.filter(
-      (product) =>
-        product.name.toLowerCase().includes(query) ||
-        product.brandName?.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query)
-    );
-  }, [products, searchQuery]);
+    return products.filter((product) => {
+      const matchesQuery = query
+        ? product.name.toLowerCase().includes(query) ||
+          product.brandName?.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query)
+        : true;
+
+      const matchesCategory =
+        selectedCategoryFilter === "all"
+          ? true
+          : product.category === selectedCategoryFilter;
+
+      const matchesBrand =
+        selectedBrandFilter === "all"
+          ? true
+          : (product.brandName || "") === selectedBrandFilter;
+
+      const productStock = Math.max(0, Number(product.stock || 0));
+      const matchesStock =
+        stockFilterMode === "all"
+          ? true
+          : stockFilterMode === "out"
+          ? productStock <= 0
+          : stockFilterMode === "low"
+          ? productStock > 0 && productStock <= normalizedStockThreshold
+          : stockFilterMode === "in"
+          ? productStock > 0
+          : productStock > normalizedStockThreshold;
+
+      return matchesQuery && matchesCategory && matchesBrand && matchesStock;
+    });
+  }, [
+    normalizedStockThreshold,
+    products,
+    searchQuery,
+    selectedBrandFilter,
+    selectedCategoryFilter,
+    stockFilterMode,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
 
@@ -406,7 +507,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategoryFilter, selectedBrandFilter, stockFilterMode, stockThreshold]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
@@ -425,6 +526,14 @@ export default function ProductsPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     resetForm();
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedCategoryFilter("all");
+    setSelectedBrandFilter("all");
+    setStockFilterMode("all");
+    setStockThreshold("10");
   };
 
   const openCreateModal = () => {
@@ -512,32 +621,64 @@ export default function ProductsPage() {
     setForm((prev) => ({ ...prev, hoverImage: URL.createObjectURL(selected) }));
   };
 
-  const deleteProducts = async (ids: string[]) => {
+  const deleteProducts = async (ids: string[], label?: string) => {
     if (ids.length === 0) return;
     setDeleteLoading(true);
     try {
       const responses = await Promise.all(
         ids.map((id) => adminFetch(`/api/products/${id}`, { method: "DELETE" }))
       );
-      if (responses.some((res) => !res.ok)) throw new Error("Failed to delete some products");
+      const failedResponse = responses.find((res) => !res.ok);
+      if (failedResponse) {
+        throw new Error(
+          await getResponseMessage(
+            failedResponse,
+            ids.length === 1 ? "Failed to delete product." : "Failed to delete selected products."
+          )
+        );
+      }
       setSelectedProductIds((prev) => prev.filter((id) => !ids.includes(id)));
       await fetchProducts();
-    } catch {
-      alert("Failed to delete product");
+      showToast(
+        ids.length === 1 && label
+          ? `Product "${label}" deleted successfully.`
+          : `${ids.length} product${ids.length === 1 ? "" : "s"} deleted successfully.`,
+        "success"
+      );
+      return true;
+    } catch (error) {
+      showToast(getErrorMessage(error, "Failed to delete product."), "error");
+      return false;
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return;
-    await deleteProducts([id]);
+  const handleDelete = async (id: string, productName: string) => {
+    setConfirmState({
+      title: "Delete product",
+      message: `Delete "${productName}"? This action cannot be undone.`,
+      confirmText: "Delete Product",
+      isDanger: true,
+      onConfirm: async () => {
+        await deleteProducts([id], productName);
+        setConfirmState(null);
+      },
+    });
   };
 
   const handleBulkDelete = async () => {
     if (selectedProductIds.length === 0) return;
-    if (!confirm(`Delete ${selectedProductIds.length} selected product(s)?`)) return;
-    await deleteProducts(selectedProductIds);
+    setConfirmState({
+      title: "Delete selected products",
+      message: `Delete ${selectedProductIds.length} selected product(s)? This action cannot be undone.`,
+      confirmText: "Delete Selected",
+      isDanger: true,
+      onConfirm: async () => {
+        await deleteProducts(selectedProductIds);
+        setConfirmState(null);
+      },
+    });
   };
 
   const toggleProductSelection = (id: string) => {
@@ -573,7 +714,7 @@ export default function ProductsPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.name || !form.category || !form.price || !form.image) {
-      alert("Name, category, price and main image are required.");
+      showToast("Product name, category, price, and main image are required.", "error");
       return;
     }
     setLoading(true);
@@ -639,11 +780,24 @@ export default function ProductsPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to save product");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(
+            res,
+            editingId ? "Failed to update product." : "Failed to create product."
+          )
+        );
+      }
       closeModal();
-      fetchProducts();
-    } catch {
-      alert("Operation failed");
+      await fetchProducts();
+      showToast(
+        editingId
+          ? `Product "${form.name}" updated successfully.`
+          : `Product "${form.name}" created successfully.`,
+        "success"
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error, "Failed to save product."), "error");
     } finally {
       setLoading(false);
     }
@@ -655,6 +809,8 @@ export default function ProductsPage() {
 
   return (
     <main className="min-h-screen bg-[#f2fbff] px-4 py-8 md:px-8">
+      <ToastStack toasts={toasts} />
+
       {/* Header Panel */}
       <Panel className="mb-6 flex flex-col gap-6 p-7 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
@@ -710,6 +866,92 @@ export default function ProductsPage() {
 
       {/* Table Panel */}
       <Panel className="p-6">
+        <div className="mb-5 grid grid-cols-1 gap-4 border-b border-[#e0f4fb] pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">
+                Category Filter
+              </label>
+              <SelectField
+                value={selectedCategoryFilter}
+                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+              >
+                <option value="all">All categories</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">
+                Brand Filter
+              </label>
+              <SelectField
+                value={selectedBrandFilter}
+                onChange={(e) => setSelectedBrandFilter(e.target.value)}
+              >
+                <option value="all">All brands</option>
+                <option value="">No brand</option>
+                {brands.map((brand) => (
+                  <option key={brand._id} value={brand.name}>
+                    {brand.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">
+                Stock Filter
+              </label>
+              <SelectField
+                value={stockFilterMode}
+                onChange={(e) =>
+                  setStockFilterMode(
+                    e.target.value as "all" | "out" | "low" | "in" | "above"
+                  )
+                }
+              >
+                <option value="all">All stock levels</option>
+                <option value="out">Out of stock</option>
+                <option value="low">At or below threshold</option>
+                <option value="in">In stock</option>
+                <option value="above">Above threshold</option>
+              </SelectField>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">
+                Stock Threshold
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={stockThreshold}
+                onChange={(e) => setStockThreshold(e.target.value)}
+                className={inputClass}
+                placeholder="10"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 lg:justify-end">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-[#cfeef7] bg-white px-4 py-3 text-xs font-black text-[#555] transition hover:bg-[#f2fbff] hover:text-[#03c7fe]"
+            >
+              Clear Filters
+            </button>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#aaa]">
+              {filteredProducts.length} matched products
+            </p>
+          </div>
+        </div>
+
         <div className="mb-4 flex items-center justify-between border-b border-[#e0f4fb] pb-4">
           <div className="flex gap-4">
             <button
@@ -728,7 +970,9 @@ export default function ProductsPage() {
               </button>
             )}
           </div>
-          <p className="text-[10px] font-black uppercase text-[#aaa]">{filteredProducts.length} total products</p>
+          <p className="text-[10px] font-black uppercase text-[#aaa]">
+            Threshold: {normalizedStockThreshold} units
+          </p>
         </div>
 
         <div className="overflow-x-auto">
@@ -796,8 +1040,8 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-3">
-                      <button onClick={() => handleEdit(product)} className="text-[#aaa] hover:text-[#03c7fe]"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(product._id)} className="text-[#aaa] hover:text-red-500"><Trash2 size={16} /></button>
+                      <button onClick={() => handleEdit(product)} className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-[#f2fbff] hover:text-[#03c7fe]"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(product._id, product.name)} className="rounded-full p-2 text-[#aaa] transition-colors hover:bg-red-50 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -850,10 +1094,10 @@ export default function ProductsPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Category *</label>
-                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required className={inputClass}>
+                    <SelectField value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required>
                       <option value="">Select category</option>
                       {categories.map((c) => (<option key={c._id} value={c.name}>{c.name}</option>))}
-                    </select>
+                    </SelectField>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Category Slug</label>
@@ -861,10 +1105,10 @@ export default function ProductsPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Brand</label>
-                    <select value={form.brandName} onChange={(e) => setForm({ ...form, brandName: e.target.value })} className={inputClass}>
+                    <SelectField value={form.brandName} onChange={(e) => setForm({ ...form, brandName: e.target.value })}>
                       <option value="">No brand</option>
                       {brands.map((b) => (<option key={b._id} value={b.name}>{b.name}</option>))}
-                    </select>
+                    </SelectField>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Brand Slug</label>
@@ -895,10 +1139,10 @@ export default function ProductsPage() {
                   </div>
                   <div className="flex flex-col gap-2 sm:col-span-4">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888]">Visibility Status</label>
-                    <select value={form.isActive ? "active" : "hidden"} onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })} className={inputClass}>
+                    <SelectField value={form.isActive ? "active" : "hidden"} onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}>
                       <option value="active">Active (Visible)</option>
                       <option value="hidden">Hidden</option>
-                    </select>
+                    </SelectField>
                   </div>
                 </div>
               </div>
@@ -1019,10 +1263,10 @@ export default function ProductsPage() {
                       <input type="text" placeholder="Name" value={nutrient.name} onChange={(e) => updateNutrient(index, "name", e.target.value)} className={inputClass} />
                       <input type="text" placeholder="Amount" value={nutrient.amount} onChange={(e) => updateNutrient(index, "amount", e.target.value)} className={inputClass} />
                       <input type="text" placeholder="Daily %" value={nutrient.dailyValue} onChange={(e) => updateNutrient(index, "dailyValue", e.target.value)} className={inputClass} />
-                      <select value={String(nutrient.indentLevel)} onChange={(e) => updateNutrient(index, "indentLevel", Number(e.target.value))} className={inputClass}>
+                      <SelectField value={String(nutrient.indentLevel)} onChange={(e) => updateNutrient(index, "indentLevel", Number(e.target.value))}>
                         <option value="0">Main row</option>
                         <option value="1">Indented</option>
-                      </select>
+                      </SelectField>
                       <label className="flex items-center gap-2 text-xs font-bold text-[#555] cursor-pointer">
                         <input type="checkbox" checked={nutrient.emphasized} onChange={(e) => updateNutrient(index, "emphasized", e.target.checked)} className="h-4 w-4 rounded border-[#cfeef7] accent-[#03c7fe]" />
                         Bold
@@ -1083,6 +1327,29 @@ export default function ProductsPage() {
             </div>
           </Panel>
         </div>
+      )}
+
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          isDanger={confirmState.isDanger}
+          isLoading={isConfirmLoading}
+          onCancel={() => {
+            if (!isConfirmLoading) {
+              setConfirmState(null);
+            }
+          }}
+          onConfirm={async () => {
+            setIsConfirmLoading(true);
+            try {
+              await confirmState.onConfirm();
+            } finally {
+              setIsConfirmLoading(false);
+            }
+          }}
+        />
       )}
     </main>
   );
