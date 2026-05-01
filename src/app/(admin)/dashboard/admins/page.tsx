@@ -58,10 +58,22 @@ export default function ManageAdminsPage() {
   // 🔹 Filter Admins
   const filteredAdmins = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return admins.filter((admin) => {
+    const filtered = admins.filter((admin) => {
       const matchesRole = roleFilter === "all" ? true : admin.role === roleFilter;
       const matchesQuery = query ? admin.email.toLowerCase().includes(query) : true;
       return matchesRole && matchesQuery;
+    });
+
+    if (roleFilter !== "all") {
+      return filtered;
+    }
+
+    return filtered.sort((left, right) => {
+      if (left.role === right.role) {
+        return 0;
+      }
+
+      return left.role === "superadmin" ? -1 : 1;
     });
   }, [admins, roleFilter, searchQuery]);
 
