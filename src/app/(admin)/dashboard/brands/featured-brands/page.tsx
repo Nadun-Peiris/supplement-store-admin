@@ -54,6 +54,18 @@ type Toast = {
   id: number;
 };
 
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 const reindexFeatured = (items: Featured[]) =>
   items.map((item, index) => ({
     ...item,
@@ -188,6 +200,12 @@ export default function FeaturedBrandsPage() {
         adminFetch("/api/brands"),
         adminFetch("/api/featured-brands"),
       ]);
+      if (!brandRes.ok) {
+        throw new Error(await getResponseMessage(brandRes, "Failed to load brands."));
+      }
+      if (!featRes.ok) {
+        throw new Error(await getResponseMessage(featRes, "Failed to load featured brands."));
+      }
       const brandData = await brandRes.json();
       const featData = await featRes.json();
 
@@ -201,7 +219,7 @@ export default function FeaturedBrandsPage() {
       );
     } catch (error) {
       console.error("Fetch error", error);
-      showToast("Failed to load brands.", "error");
+      showToast(getErrorMessage(error, "Failed to load brands."), "error");
     } finally {
       setPageLoading(false);
     }
@@ -224,11 +242,15 @@ export default function FeaturedBrandsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brandId }),
       });
-      if (!res.ok) throw new Error("Failed to add");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(res, "Failed to add featured brand.")
+        );
+      }
       await fetchInitialData();
       showToast("Brand added to featured list.", "success");
-    } catch {
-      showToast("Error adding brand.", "error");
+    } catch (error) {
+      showToast(getErrorMessage(error, "Error adding brand."), "error");
     } finally {
       setLoading(false);
     }
@@ -239,11 +261,15 @@ export default function FeaturedBrandsPage() {
       const res = await adminFetch(`/api/featured-brands/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to remove");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(res, "Failed to remove featured brand.")
+        );
+      }
       setFeatured((prev) => reindexFeatured(prev.filter((f) => f._id !== id)));
       showToast("Brand removed from featured.", "info");
-    } catch {
-      showToast("Failed to remove brand.", "error");
+    } catch (error) {
+      showToast(getErrorMessage(error, "Failed to remove brand."), "error");
     }
   };
 
@@ -270,14 +296,16 @@ export default function FeaturedBrandsPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save order");
+        throw new Error(
+          await getResponseMessage(res, "Failed to save order")
+        );
       }
 
       showToast("Order updated successfully.", "success");
     } catch (error) {
       console.error("Order save failed", error);
       setFeatured(previousOrder);
-      showToast("Failed to save new order.", "error");
+      showToast(getErrorMessage(error, "Failed to save new order."), "error");
     }
   };
 

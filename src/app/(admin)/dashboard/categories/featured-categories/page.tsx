@@ -58,6 +58,18 @@ type Toast = {
   id: number;
 };
 
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 const reindexFeatured = (items: Featured[]) =>
   items.map((item, index) => ({
     ...item,
@@ -187,6 +199,12 @@ export default function FeaturedCategoriesPage() {
         adminFetch("/api/categories"),
         adminFetch("/api/featured-categories")
       ]);
+      if (!catRes.ok) {
+        throw new Error(await getResponseMessage(catRes, "Failed to load categories."));
+      }
+      if (!featRes.ok) {
+        throw new Error(await getResponseMessage(featRes, "Failed to load featured categories."));
+      }
       const catData = await catRes.json();
       const featData = await featRes.json();
       
@@ -198,7 +216,7 @@ export default function FeaturedCategoriesPage() {
       );
     } catch (error) {
       console.error("Fetch error", error);
-      showToast("Failed to load categories.", "error");
+      showToast(getErrorMessage(error, "Failed to load categories."), "error");
     } finally {
       setPageLoading(false);
     }
@@ -219,11 +237,15 @@ export default function FeaturedCategoriesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categoryId }),
       });
-      if (!res.ok) throw new Error("Failed to add");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(res, "Failed to add featured category.")
+        );
+      }
       await fetchInitialData();
       showToast("Category added to featured list.", "success");
     } catch (error) {
-      showToast("Error adding category.", "error");
+      showToast(getErrorMessage(error, "Error adding category."), "error");
     } finally {
       setLoading(false);
     }
@@ -232,11 +254,15 @@ export default function FeaturedCategoriesPage() {
   const handleRemove = async (id: string) => {
     try {
       const res = await adminFetch(`/api/featured-categories/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove");
+      if (!res.ok) {
+        throw new Error(
+          await getResponseMessage(res, "Failed to remove featured category.")
+        );
+      }
       setFeatured((prev) => reindexFeatured(prev.filter((f) => f._id !== id)));
       showToast("Category removed from featured.", "info");
     } catch (error) {
-      showToast("Failed to remove category.", "error");
+      showToast(getErrorMessage(error, "Failed to remove category."), "error");
     }
   };
 
@@ -263,14 +289,16 @@ export default function FeaturedCategoriesPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save order");
+        throw new Error(
+          await getResponseMessage(res, "Failed to save order")
+        );
       }
 
       showToast("Order updated successfully.", "success");
     } catch (error) {
       console.error("Order save failed", error);
       setFeatured(previousOrder);
-      showToast("Failed to save new order.", "error");
+      showToast(getErrorMessage(error, "Failed to save new order."), "error");
     }
   };
 

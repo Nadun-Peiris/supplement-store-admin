@@ -99,6 +99,88 @@ const ACTIVITY_OPTIONS: UserActivity[] = [
 ];
 const DIET_OPTIONS: UserDiet[] = ["Standard", "Vegetarian", "Vegan", "Keto", "Paleo"];
 
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
+const USER_FIELD_LABELS: Partial<Record<keyof UserFormData, string>> = {
+  fullName: "Full name",
+  email: "Email",
+  phone: "Phone",
+  age: "Age",
+  gender: "Gender",
+  height: "Height",
+  weight: "Weight",
+  bmi: "BMI",
+  goal: "Goal",
+  activity: "Activity",
+  conditions: "Conditions",
+  diet: "Diet",
+  sleepHours: "Sleep hours",
+  waterIntake: "Water intake",
+  addressLine1: "Address line 1",
+  addressLine2: "Address line 2",
+  city: "City",
+  postalCode: "Postal code",
+  country: "Country",
+};
+
+const REQUIRED_USER_FIELDS: Array<keyof UserFormData> = [
+  "fullName",
+  "phone",
+  "age",
+  "gender",
+  "addressLine1",
+  "city",
+  "postalCode",
+  "country",
+];
+
+function getUserFieldLabel(field: string) {
+  return USER_FIELD_LABELS[field as keyof UserFormData] || field;
+}
+
+function getMissingRequiredUserFieldMessage(formData: UserFormData) {
+  for (const field of REQUIRED_USER_FIELDS) {
+    const value = formData[field];
+
+    if (typeof value !== "string" || !value.trim()) {
+      return `${getUserFieldLabel(field)} is required.`;
+    }
+  }
+
+  return null;
+}
+
+function formatUserValidationMessage(message: string) {
+  const requiredMatch = message.match(/^([A-Za-z0-9_]+) is required$/i);
+  if (requiredMatch) {
+    return `${getUserFieldLabel(requiredMatch[1])} is required.`;
+  }
+
+  const nonEmptyMatch = message.match(/^([A-Za-z0-9_]+) must be a non-empty string$/i);
+  if (nonEmptyMatch) {
+    return `${getUserFieldLabel(nonEmptyMatch[1])} is required.`;
+  }
+
+  const numberMatch = message.match(/^([A-Za-z0-9_]+) must be a valid number$/i);
+  if (numberMatch) {
+    return `${getUserFieldLabel(numberMatch[1])} must be a valid number.`;
+  }
+
+  const invalidMatch = message.match(/^Invalid ([A-Za-z0-9_]+) value$/i);
+  if (invalidMatch) {
+    return `Invalid ${getUserFieldLabel(invalidMatch[1]).toLowerCase()} value.`;
+  }
+
+  return message;
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -148,17 +230,19 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       const res = await adminFetch("/api/users");
-      if (!res.ok) {
-        throw new Error("Failed to fetch users");
-      }
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fetch users");
+      }
       setUsers(data.users || []);
 
       const decoded = data.users?.find((u: User) => u._id === data.currentUserId);
       if (decoded) setCurrentUser(decoded);
-    } catch {
-      console.error("Failed to fetch users");
-      showToast("Failed to load users.", "error");
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to load users.";
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -304,6 +388,13 @@ export default function UsersPage() {
 
   const handleSaveUser = async () => {
     if (!editingUser) return;
+
+    const missingFieldMessage = getMissingRequiredUserFieldMessage(formData);
+    if (missingFieldMessage) {
+      showToast(missingFieldMessage, "error");
+      return;
+    }
+
     try {
       setIsEditLoading(true);
       const res = await adminFetch(`/api/users/${editingUser._id}`, {
@@ -315,7 +406,11 @@ export default function UsersPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update user");
+      if (!res.ok) {
+        throw new Error(
+          formatUserValidationMessage(data.error || "Failed to update user")
+        );
+      }
 
       setIsModalOpen(false);
       setEditingUser(null);
@@ -323,7 +418,9 @@ export default function UsersPage() {
       showToast("User details updated.", "success");
     } catch (error) {
       console.error(error);
-      showToast("Error saving user. Please try again.", "error");
+      const message =
+        error instanceof Error ? error.message : "Error saving user. Please try again.";
+      showToast(message, "error");
     } finally {
       setIsEditLoading(false);
     }
@@ -343,7 +440,11 @@ export default function UsersPage() {
           method: "DELETE",
         });
 
-        if (!res.ok) throw new Error("Failed to delete user");
+        if (!res.ok) {
+          throw new Error(
+            await getResponseMessage(res, "Failed to delete user")
+          );
+        }
         fetchUsers();
         showToast("User deleted permanently.", "success");
       },

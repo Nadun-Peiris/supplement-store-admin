@@ -20,6 +20,15 @@ type ConfirmState = {
   onConfirm: () => Promise<void>;
 };
 
+const getResponseMessage = async (res: Response, fallback: string) => {
+  try {
+    const data = await res.json();
+    if (typeof data?.error === "string" && data.error.trim()) return data.error;
+    if (typeof data?.message === "string" && data.message.trim()) return data.message;
+  } catch {}
+  return fallback;
+};
+
 /* ─── Shared UI Component ────────────────────────────────────────── */
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -45,18 +54,18 @@ export default function ManageAdminsPage() {
   const fetchAdmins = useCallback(async () => {
     try {
       const res = await adminFetch("/api/admin/set-role", { method: "GET" });
-
-      const data = await res.json();
-
       if (!res.ok) {
-        setMessage(`⚠️ ${data.error || "Failed to fetch admins."}`);
+        setMessage(`⚠️ ${await getResponseMessage(res, "Failed to fetch admins.")}`);
         return;
       }
 
+      const data = await res.json();
       setAdmins(data.admins || []);
     } catch (error) {
       console.error("Error fetching admins:", error);
-      setMessage("⚠️ Failed to fetch admins.");
+      setMessage(
+        `⚠️ ${error instanceof Error ? error.message : "Failed to fetch admins."}`
+      );
     } finally {
       setPageLoading(false);
     }
@@ -116,8 +125,8 @@ export default function ManageAdminsPage() {
         body: JSON.stringify({ email: targetEmail, makeAdmin }),
       });
 
-      const data = await res.json();
       if (res.ok) {
+        await res.json();
         setMessage(makeAdmin ? "✅ User promoted to Admin!" : "❎ Admin role removed.");
         if (makeAdmin) {
           setEmail("");
@@ -125,10 +134,12 @@ export default function ManageAdminsPage() {
         }
         await fetchAdmins(); // 🔄 Auto refresh admin list
       } else {
-        setMessage(`⚠️ ${data.error || "Failed to update role."}`);
+        setMessage(`⚠️ ${await getResponseMessage(res, "Failed to update role.")}`);
       }
-    } catch {
-      setMessage("⚠️ Failed to connect to the server.");
+    } catch (error) {
+      setMessage(
+        `⚠️ ${error instanceof Error ? error.message : "Failed to connect to the server."}`
+      );
     } finally {
       setLoading(false);
     }
