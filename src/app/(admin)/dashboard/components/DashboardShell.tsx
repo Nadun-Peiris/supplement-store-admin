@@ -111,6 +111,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [searchResults, setSearchResults] = useState<GlobalSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [currentDateTime, setCurrentDateTime] = useState<Date | null>(null);
   const [sidebarCounts, setSidebarCounts] = useState<Record<SidebarBadgeKey, number>>({
     orders: 0,
     pendingPayments: 0,
@@ -139,6 +140,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     document.documentElement.setAttribute("data-admin-theme", theme);
     window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    const syncDateTime = () => setCurrentDateTime(new Date());
+
+    syncDateTime();
+    const intervalId = window.setInterval(syncDateTime, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -393,6 +403,26 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     () => displayName.trim().charAt(0).toUpperCase() || "A",
     [displayName]
   );
+  const formattedDate = useMemo(() => {
+    if (!currentDateTime) return "Loading date...";
+
+    return new Intl.DateTimeFormat("en-LK", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(currentDateTime);
+  }, [currentDateTime]);
+  const formattedTime = useMemo(() => {
+    if (!currentDateTime) return "--:--:--";
+
+    return new Intl.DateTimeFormat("en-LK", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(currentDateTime);
+  }, [currentDateTime]);
 
   const handleGlobalSearchSelect = (href: string) => {
     setGlobalSearch("");
@@ -603,6 +633,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           {/* Right: Profile Info */}
           <div className="flex items-center justify-end gap-5">
+            <div className="hidden text-right md:flex md:flex-col">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#03c7fe]">
+                {formattedDate}
+              </p>
+              <p className="mt-1 text-sm font-black text-[#111]">{formattedTime}</p>
+            </div>
             <button
               type="button"
               onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}

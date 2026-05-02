@@ -64,7 +64,13 @@ const UserSchema = new Schema<IUser>(
 
     // Step 1: Basic
     fullName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     phone: { type: String, required: true, unique: true },
     age: { type: Number, required: true },
     gender: { 
@@ -134,9 +140,6 @@ const UserSchema = new Schema<IUser>(
 /* ---------------------------------------------------------
    Indexes
 --------------------------------------------------------- */
-UserSchema.index({ email: 1 });
-UserSchema.index({ firebaseId: 1 });
-
 // Ensure only one superadmin exists if needed, or just index roles
 UserSchema.index(
   { role: 1 },
