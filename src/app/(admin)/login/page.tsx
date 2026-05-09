@@ -1,62 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { FirebaseError } from "firebase/app";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import Image from "next/image";
-import { FaLock, FaEnvelope } from "react-icons/fa";
 import { Loader2 } from "lucide-react";
+import { FaEnvelope, FaLock } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { auth } from "@/lib/firebase";
+
+const ADMIN_THEME_STORAGE_KEY = "admin-dashboard-theme";
+const LOGIN_SKIP_LOADER_KEY = "admin-login-skip-loader";
+const Player = dynamic(
+  () => import("@lottiefiles/react-lottie-player").then((mod) => mod.Player),
+  { ssr: false }
+);
 
 function LoginScreenLoader({ isFading }: { isFading: boolean }) {
   return (
     <div
-      className={`absolute inset-0 z-20 transition-opacity duration-500 ${
-        isFading ? "pointer-events-none opacity-0" : "opacity-100"
-      }`}
+      className="absolute inset-0 z-20"
+      style={{
+        opacity: isFading ? 0 : 1,
+        transition: "opacity 600ms cubic-bezier(0.4, 0, 0.2, 1)",
+        pointerEvents: isFading ? "none" : "auto",
+        willChange: "opacity",
+      }}
     >
-      <div className="flex min-h-screen items-center bg-[#f2fbff] px-5 py-6 lg:p-6">
-        <div className="mx-auto flex w-full max-w-[1280px] items-stretch overflow-hidden rounded-[2rem] border border-white/70 bg-white/55 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:min-h-[calc(100vh-3rem)]">
-          <div className="hidden lg:flex lg:w-[48%] flex-col justify-between bg-[linear-gradient(160deg,#04131d_0%,#0f3e55_45%,#03c7fe_140%)] p-12 text-white">
-            <div className="space-y-6">
-              <div className="h-8 w-28 rounded-full bg-white/15 animate-pulse" />
-              <div className="space-y-3">
-                <div className="h-5 w-40 rounded-full bg-white/12 animate-pulse" />
-                <div className="h-14 w-[82%] rounded-[1.5rem] bg-white/12 animate-pulse" />
-                <div className="h-14 w-[68%] rounded-[1.5rem] bg-white/12 animate-pulse" />
-              </div>
-              <div className="h-4 w-[72%] rounded-full bg-white/10 animate-pulse" />
-            </div>
-            <div className="space-y-3">
-              <div className="h-24 rounded-[1.75rem] border border-white/10 bg-white/10 animate-pulse" />
-              <div className="h-24 rounded-[1.75rem] border border-white/10 bg-white/10 animate-pulse" />
-            </div>
-          </div>
-
-          <div className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(3,199,254,0.12),_transparent_50%),linear-gradient(180deg,_rgba(255,255,255,0.95)_0%,_rgba(244,251,255,0.88)_100%)] px-6 py-10 sm:px-8 lg:px-12">
-            <div className="w-full max-w-[430px] rounded-[2rem] border border-white/80 bg-white/85 p-8 shadow-[0_20px_60px_rgba(3,199,254,0.12)] backdrop-blur-xl sm:p-10">
-              <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-[#03c7fe] text-white shadow-[0_10px_30px_rgba(3,199,254,0.32)]">
-                <Loader2 size={24} className="animate-spin" />
-              </div>
-              <div className="space-y-3 text-center">
-                <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#8ea4b5]">
-                  Admin Access
-                </p>
-                <h2 className="text-2xl font-black tracking-tight text-[#111]">
-                  Preparing secure sign in
-                </h2>
-                <p className="text-sm leading-6 text-[#667a89]">
-                  Loading the admin workspace and authentication checks.
-                </p>
-              </div>
-              <div className="mt-8 space-y-3">
-                <div className="h-12 rounded-2xl bg-[#eef8fc] animate-pulse" />
-                <div className="h-12 rounded-2xl bg-[#eef8fc] animate-pulse" />
-                <div className="h-14 rounded-2xl bg-[#c9f3ff] animate-pulse" />
-              </div>
-            </div>
-          </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#07131a] px-5 py-6">
+        <div className="flex flex-col items-center justify-center">
+          <Player
+            autoplay
+            loop
+            src="/animations/loading.json"
+            className="h-56 w-56 sm:h-64 sm:w-64"
+          />
         </div>
       </div>
     </div>
@@ -71,19 +50,45 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const loaderTimer = window.setTimeout(() => {
+    if (typeof window === "undefined") return;
+    const storedTheme = window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY);
+    const resolvedTheme = storedTheme === "dark" ? "dark" : "light";
+    setTheme(resolvedTheme);
+    document.documentElement.setAttribute("data-admin-theme", resolvedTheme);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-admin-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (window.sessionStorage.getItem(LOGIN_SKIP_LOADER_KEY) === "true") {
+      window.sessionStorage.removeItem(LOGIN_SKIP_LOADER_KEY);
+      setShowLoader(false);
+      setShowForm(true);
+      return;
+    }
+
+    // Start fade at 1400ms
+    const fadeTimer = window.setTimeout(() => {
       setIsLoaderFading(true);
       setShowForm(true);
-    }, 1100);
-    const removeLoaderTimer = window.setTimeout(() => {
+    }, 1400);
+
+    // Unmount loader 600ms after fade starts (matches transition duration)
+    const removeTimer = window.setTimeout(() => {
       setShowLoader(false);
-    }, 1500);
+    }, 2000);
 
     return () => {
-      window.clearTimeout(loaderTimer);
-      window.clearTimeout(removeLoaderTimer);
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(removeTimer);
     };
   }, []);
 
@@ -119,7 +124,11 @@ export default function AdminLoginPage() {
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
-        toast.error(err.code === "auth/invalid-credential" ? "Invalid credentials" : "Login failed");
+        toast.error(
+          err.code === "auth/invalid-credential"
+            ? "Invalid credentials"
+            : "Login failed"
+        );
       }
     } finally {
       setSubmitting(false);
@@ -141,9 +150,7 @@ export default function AdminLoginPage() {
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: trimmedEmail }),
       });
 
@@ -168,11 +175,19 @@ export default function AdminLoginPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-2xl border border-[#cfeef7] bg-[#fbfdff] px-4 py-3.5 pl-11 text-sm text-[#111] outline-none transition-all placeholder:font-semibold placeholder:text-[#bcc6d3] focus:border-[#03c7fe] focus:ring-4 focus:ring-[#03c7fe]/15";
+  const isDark = theme === "dark";
+  const inputClass = `w-full rounded-2xl border px-4 py-3.5 pl-11 text-sm outline-none transition-all placeholder:font-semibold focus:border-[#03c7fe] focus:ring-4 focus:ring-[#03c7fe]/15 ${
+    isDark
+      ? "border-[#234252] bg-[#10202a] text-[#edf6fa] placeholder:text-[#748894]"
+      : "border-[#cfeef7] bg-[#fbfdff] text-[#111] placeholder:text-[#bcc6d3]"
+  }`;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f2fbff]">
+    <main
+      className={`relative min-h-screen overflow-hidden ${
+        isDark ? "bg-[#07131a]" : "bg-[#f2fbff]"
+      }`}
+    >
       {showLoader ? <LoginScreenLoader isFading={isLoaderFading} /> : null}
 
       <div className="relative flex min-h-screen items-stretch">
@@ -211,8 +226,7 @@ export default function AdminLoginPage() {
                     Product and inventory
                   </h3>
                   <p className="mt-2 text-[12px] leading-5 text-white/65">
-                    Keep stock, pricing, and featured placements current in
-                    real time.
+                    Keep stock, pricing, and featured placements current in real time.
                   </p>
                 </div>
                 <div className="rounded-[1.75rem] border border-white/12 bg-white/10 p-5 backdrop-blur-sm">
@@ -220,8 +234,7 @@ export default function AdminLoginPage() {
                     Orders and fulfilment
                   </h3>
                   <p className="mt-2 text-[12px] leading-5 text-white/65">
-                    Monitor payments, status changes, and daily operational
-                    flow.
+                    Monitor payments, status changes, and daily operational flow.
                   </p>
                 </div>
               </div>
@@ -231,100 +244,129 @@ export default function AdminLoginPage() {
 
         <section className="flex min-h-screen flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-8 lg:px-12 lg:py-10">
           <div
-            className={`w-full max-w-[470px] transition-all duration-500 ${
-              showForm ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            className={`w-full max-w-[470px] transition-all duration-700 ease-out ${
+              showForm
+                ? "translate-y-0 scale-100 opacity-100"
+                : "translate-y-4 scale-[0.985] opacity-0"
             }`}
           >
-            <div className="rounded-[2rem] border border-white/80 bg-white/88 px-6 py-10 shadow-[0_24px_60px_rgba(3,199,254,0.12)] backdrop-blur-xl sm:px-8 lg:px-10">
+            <div
+              className={`rounded-[2rem] border px-6 py-10 backdrop-blur-xl sm:px-8 lg:px-10 ${
+                isDark
+                  ? "border-[#234252] bg-[#0b161ce6] shadow-[0_24px_60px_rgba(0,0,0,0.32)]"
+                  : "border-white/80 bg-white/88 shadow-[0_24px_60px_rgba(3,199,254,0.12)]"
+              }`}
+            >
               <div className="mb-8 text-center">
                 <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-[#03c7fe] text-white shadow-[0_10px_30px_rgba(3,199,254,0.3)]">
                   <FaLock size={24} />
                 </div>
-                <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#8ea4b5]">
+                <p
+                  className={`text-[11px] font-black uppercase tracking-[0.28em] ${
+                    isDark ? "text-[#96a9b5]" : "text-[#8ea4b5]"
+                  }`}
+                >
                   Secure Admin Access
                 </p>
-                <h1 className="mt-3 text-3xl font-black tracking-tight text-[#111]">
+                <h1
+                  className={`mt-3 text-3xl font-black tracking-tight ${
+                    isDark ? "text-[#edf6fa]" : "text-[#111]"
+                  }`}
+                >
                   {resetMode ? "Reset Password" : "Admin Login"}
                 </h1>
                 {resetMode ? (
-                  <p className="mt-3 text-sm leading-6 text-[#6f8190]">
-                    Enter the email tied to your admin account and we will send
-                    a reset link.
+                  <p
+                    className={`mt-3 text-sm leading-6 ${
+                      isDark ? "text-[#b5c2cb]" : "text-[#6f8190]"
+                    }`}
+                  >
+                    Enter the email tied to your admin account and we will send a reset link.
                   </p>
                 ) : null}
               </div>
 
-              <div>
-                <form
-                  onSubmit={resetMode ? handleForgotPassword : handleLogin}
-                  className="space-y-4"
-                >
+              <form
+                onSubmit={resetMode ? handleForgotPassword : handleLogin}
+                className="space-y-4"
+              >
+                <div>
+                  <label
+                    className={`mb-2 block text-[10px] font-black uppercase tracking-[0.22em] ${
+                      isDark ? "text-[#96a9b5]" : "text-[#a1b2bf]"
+                    }`}
+                  >
+                    Email
+                  </label>
+                  <div className="relative">
+                    <FaEnvelope
+                      className={`absolute left-4 top-4 ${
+                        isDark ? "text-[#748894]" : "text-[#8ca2b2]"
+                      }`}
+                      size={14}
+                    />
+                    <input
+                      type="email"
+                      placeholder="admin@example.com"
+                      className={inputClass}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {!resetMode && (
                   <div>
-                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.22em] text-[#a1b2bf]">
-                      Email
+                    <label
+                      className={`mb-2 block text-[10px] font-black uppercase tracking-[0.22em] ${
+                        isDark ? "text-[#96a9b5]" : "text-[#a1b2bf]"
+                      }`}
+                    >
+                      Password
                     </label>
                     <div className="relative">
-                      <FaEnvelope
-                        className="absolute left-4 top-4 text-[#8ca2b2]"
+                      <FaLock
+                        className={`absolute left-4 top-4 ${
+                          isDark ? "text-[#748894]" : "text-[#8ca2b2]"
+                        }`}
                         size={14}
                       />
                       <input
-                        type="email"
-                        placeholder="admin@example.com"
+                        type="password"
+                        placeholder="Enter your password"
                         className={inputClass}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        autoComplete="email"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="current-password"
                         required
                       />
                     </div>
                   </div>
-
-                  {!resetMode && (
-                    <div>
-                      <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.22em] text-[#a1b2bf]">
-                        Password
-                      </label>
-                      <div className="relative">
-                        <FaLock
-                          className="absolute left-4 top-4 text-[#8ca2b2]"
-                          size={14}
-                        />
-                        <input
-                          type="password"
-                          placeholder="Enter your password"
-                          className={inputClass}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          autoComplete="current-password"
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full rounded-[1.25rem] bg-[#03c7fe] py-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(3,199,254,0.28)] transition-all hover:scale-[1.02] hover:bg-[#02b8ea] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <Loader2 className="mx-auto animate-spin" />
-                    ) : resetMode ? (
-                      "Send Reset Link"
-                    ) : (
-                      "Sign In"
-                    )}
-                  </button>
-                </form>
+                )}
 
                 <button
-                  onClick={() => setResetMode(!resetMode)}
-                  className="mt-6 w-full text-center text-xs font-bold text-[#03c7fe] hover:underline"
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-[1.25rem] bg-[#03c7fe] py-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(3,199,254,0.28)] transition-all hover:scale-[1.02] hover:bg-[#02b8ea] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {resetMode ? "Back to Login" : "Forgot Password?"}
+                  {submitting ? (
+                    <Loader2 className="mx-auto animate-spin" />
+                  ) : resetMode ? (
+                    "Send Reset Link"
+                  ) : (
+                    "Sign In"
+                  )}
                 </button>
-              </div>
+              </form>
+
+              <button
+                onClick={() => setResetMode(!resetMode)}
+                className="mt-6 w-full text-center text-xs font-bold text-[#03c7fe] hover:underline"
+              >
+                {resetMode ? "Back to Login" : "Forgot Password?"}
+              </button>
             </div>
           </div>
         </section>

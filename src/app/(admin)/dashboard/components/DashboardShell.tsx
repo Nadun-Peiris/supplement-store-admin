@@ -48,6 +48,7 @@ type SidebarSubscription = {
 
 const PENDING_PAYMENTS_VIEWED_AT_KEY = "admin-sidebar-pending-payments-viewed-at";
 const ADMIN_THEME_STORAGE_KEY = "admin-dashboard-theme";
+const LOGIN_SKIP_LOADER_KEY = "admin-login-skip-loader";
 
 const navItems = [
   { name: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
@@ -363,6 +364,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, [pathname, role]);
 
   const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(LOGIN_SKIP_LOADER_KEY, "true");
+    }
+
     try {
       await fetch("/api/auth/session", {
         method: "DELETE",
