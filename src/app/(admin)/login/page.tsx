@@ -7,7 +7,9 @@ import { FirebaseError } from "firebase/app";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
-import toast from "react-hot-toast";
+import ToastStack, {
+  type DashboardToast,
+} from "@/app/(admin)/dashboard/components/ToastStack";
 import { auth } from "@/lib/firebase";
 
 const ADMIN_THEME_STORAGE_KEY = "admin-dashboard-theme";
@@ -52,6 +54,7 @@ export default function AdminLoginPage() {
   const [showForm, setShowForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [toasts, setToasts] = useState<DashboardToast[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -93,6 +96,17 @@ export default function AdminLoginPage() {
     };
   }, []);
 
+  const pushToast = (
+    message: string,
+    type: DashboardToast["type"] = "info"
+  ) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -107,7 +121,7 @@ export default function AdminLoginPage() {
 
       if (!roleCheckResponse.ok) {
         await signOut(auth);
-        toast.error("Access denied. Admin privileges required.");
+        pushToast("Access denied. Admin privileges required.", "error");
         return;
       }
 
@@ -118,17 +132,18 @@ export default function AdminLoginPage() {
 
       if (!sessionResponse.ok) {
         await signOut(auth);
-        toast.error("Failed to start admin session.");
+        pushToast("Failed to start admin session.", "error");
         return;
       }
 
       window.location.href = "/dashboard";
     } catch (err: unknown) {
       if (err instanceof FirebaseError) {
-        toast.error(
+        pushToast(
           err.code === "auth/invalid-credential"
             ? "Incorrect password"
-            : "Login failed"
+            : "Login failed",
+          "error"
         );
       }
     } finally {
@@ -142,7 +157,7 @@ export default function AdminLoginPage() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      toast.error("Please enter your email");
+      pushToast("Please enter your email", "error");
       return;
     }
 
@@ -163,13 +178,13 @@ export default function AdminLoginPage() {
         throw new Error(data?.error || "Failed to send reset link");
       }
 
-      toast.success(data?.message || "Reset link sent to your inbox!");
+      pushToast(data?.message || "Reset link sent to your inbox!", "success");
       setResetMode(false);
     } catch (err) {
       if (err instanceof Error) {
-        toast.error(err.message);
+        pushToast(err.message, "error");
       } else {
-        toast.error("Failed to send reset link");
+        pushToast("Failed to send reset link", "error");
       }
     } finally {
       setSubmitting(false);
@@ -189,6 +204,8 @@ export default function AdminLoginPage() {
         isDark ? "bg-[#07131a]" : "bg-[#f2fbff]"
       }`}
     >
+      <ToastStack toasts={toasts} />
+
       {showLoader ? <LoginScreenLoader isFading={isLoaderFading} /> : null}
 
       <div className="relative flex min-h-screen items-stretch">
