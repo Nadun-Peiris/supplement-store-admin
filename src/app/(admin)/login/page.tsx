@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FirebaseError } from "firebase/app";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { auth } from "@/lib/firebase";
@@ -50,6 +50,7 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export default function AdminLoginPage() {
       if (err instanceof FirebaseError) {
         toast.error(
           err.code === "auth/invalid-credential"
-            ? "Invalid credentials"
+            ? "Incorrect password"
             : "Login failed"
         );
       }
@@ -334,14 +335,26 @@ export default function AdminLoginPage() {
                         size={14}
                       />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className={inputClass}
+                        className={`${inputClass} pr-12`}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((current) => !current)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
+                          isDark
+                            ? "text-[#748894] hover:text-[#edf6fa]"
+                            : "text-[#8ca2b2] hover:text-[#111]"
+                        }`}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                     </div>
                   </div>
                 )}
